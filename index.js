@@ -1,3 +1,10 @@
-import { State } from "./State.js";
+import { State,  } from "./State.js";
+import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from './Disposables.js';
 
-export default State;
+export {
+  State,
+  Signal,
+  DisposableSignalListener,
+  DisposableSingleDirectionBinder,
+  DisposableBidirectionalBinder
+};

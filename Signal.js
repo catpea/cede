@@ -35,7 +35,7 @@ export class Signal {
 
     this.#value = value;
 
-    localStorage.setItem( this.domain +'-'+ this.id, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
+
 
     this.#changeSubscribers = new Set();
     this.#readSubscribers = new Set();
@@ -46,6 +46,15 @@ export class Signal {
         return this.value;
       },
     });
+
+
+    const currentValue = localStorage.getItem( this.domain +'-'+ this.name) ;
+    if (currentValue === null) {
+      localStorage.setItem( this.domain +'-'+ this.name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
+    }else{
+        this.sync(JSON.parse(currentValue));
+    }
+
   }
 
   get id() {
@@ -73,7 +82,7 @@ export class Signal {
 
   watch() {
     const watcher = (event) => {
-      if (event.key === this.domain +'-'+ this.id) {
+      if (event.key === this.domain +'-'+ this.name) {
         this.sync(JSON.parse(event.newValue));
       }
     };
@@ -83,6 +92,7 @@ export class Signal {
 
   sync({ rev, revId, value }) {
     if (rev > this.#rev) {
+      this.#rev = rev; // set to equal, it is incremented later
       this.value = value;
     } else if (rev == this.#rev && revId > this.#revId) {
       this.value = value;
@@ -99,7 +109,7 @@ export class Signal {
     this.#rev++;
     this.#revId = this.#generateId();
 
-    localStorage.setItem( this.domain +'-'+ this.id, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
+    localStorage.setItem( this.domain +'-'+ this.name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
 
     this.notify();
   }
