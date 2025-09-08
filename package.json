@@ -1,0 +1,25 @@
+{
+  "name": "cede",
+  "description": "The Practical Operating Substrate for Apps",
+  "version": "1.0.2",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "demo": "http-server -c-1 -o .",
+    "save": "git add .; git commit -m 'Updated Release'; npm version patch; npm publish; git push --follow-tags;"
+  },
+  "keywords": [
+    "state",
+    "signals"
+  ],
+  "author": "@catpea",
+  "license": "GPL",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/catpea/cede.git"
+  },
+  "bugs": {
+    "url": "https://github.com/catpea/cede/issues"
+  },
+  "homepage": "https://github.com/catpea/cede#readme"
+}
