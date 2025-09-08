@@ -3,11 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>State Kernel Demo</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
+    <title>State Kernel Demo - cede</title>
   </head>
   <body>
     <h1 id="helloWorldElement">Hello, world!</h1>
     <input type="text" id="helloWorldInput"></input>
+    <h1 id="inputPreviewElement">Hello, world!</h1>
     <script type="module">
 
       import { State } from './State.js';
@@ -21,6 +23,7 @@
       const disposable1 = new DisposableSignalListener(state.get('hello'), console.log)
       const disposable2 = new DisposableSingleDirectionBinder(state.get('hello'), helloWorldElement);
       const disposable3 = new DisposableBidirectionalBinder(state.get('jello'), helloWorldInput);
+      const disposable4 = new DisposableSingleDirectionBinder(state.get('jello'), inputPreviewElement);
 
     </script>
   </body>
