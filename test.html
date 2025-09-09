@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
+    <title>State Kernel Demo - cede</title>
+  </head>
+  <body>
+    <h1 id="helloWorldElement">Hello, world!</h1>
+    <input type="text" id="helloWorldInput"></input>
+
+    <input type="text" id="firstNameInput"></input>
+    <input type="text" id="lastNameInput"></input>
+
+    <h1 id="inputPreviewElement">Hello, world!</h1>
+    <script type="module">
+
+      import { Tree } from './Tree.js';
+
+      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from './Disposables.js';
+
+
+      const tree = new Tree('kernel-test');
+
+      const  firstName = tree.mk('/my-app/user/profile.obj/firstName', 'Alice');
+      firstName.subscribe(console.log);
+
+      const lastName = tree.mk('/my-app/user/profile.obj/lastName');
+
+      tree.write('/my-app/user/profile.obj/firstName', 'alice');
+      tree.write('/my-app/user/profile.obj/lastName', 'Kingsleigh');
+      tree.mk('/my-app/user/color.arr/0/color', '#ff0000');
+
+      lastName.subscribe(console.log);
+
+      // array test, and not clobering existing objects
+
+      tree.mk('/my-app/colorStops.arr');
+
+      tree.mk('/my-app/colorStops.arr/0/color');
+      tree.mk('/my-app/colorStops.arr/1/color');
+      tree.mk('/my-app/colorStops.arr/2/color');
+
+      tree.mk('/my-app/colorStops.arr/0/percentage');
+      tree.mk('/my-app/colorStops.arr/1/percentage');
+      tree.mk('/my-app/colorStops.arr/2/percentage');
+
+      tree.write('/my-app/colorStops.arr/0/color', '#ff0000');
+      tree.write('/my-app/colorStops.arr/1/color', '#00ff00');
+      tree.write('/my-app/colorStops.arr/2/color', '#0000ff');
+
+      tree.write('/my-app/colorStops.arr/0/percentage', 0);
+      tree.write('/my-app/colorStops.arr/1/percentage', 50);
+      tree.write('/my-app/colorStops.arr/2/percentage', 100);
+
+      // const disposable1 = new DisposableSignalListener(state.get('hello'), console.log)
+      // const disposable2 = new DisposableSingleDirectionBinder(state.get('hello'), helloWorldElement);
+      // const disposable4 = new DisposableSingleDirectionBinder(state.get('jello'), inputPreviewElement);
+
+
+      const disposableFirstName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/firstName'), firstNameInput);
+      const disposableLastName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/lastName'), lastNameInput);
+      tree.dump();
+
+
+    </script>
+  </body>
+</html>

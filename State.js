@@ -11,39 +11,58 @@ export class State {
   #redoStack;
 
   constructor(domain) {
+
     this.#domain = domain;
     this.#signals = new Map();
     this.#undoStack = [];
     this.#redoStack = [];
+
   }
 
-  // --- Creation ---
-  newValue(name, value) {
-   const valueSignal = new Signal(value, { domain: this.#domain, name });
-    this.#signals.set(name, valueSignal);
-    return valueSignal;
-  }
 
-  newArray(name, ...initial) {
-   const arraySignal = new Signal(initial, { domain: this.#domain, name });
-    this.#signals.set(name, arraySignal);
-    return arraySignal;
-  }
 
-  newObject(name, ...initial) {
-   const objectSignal = new Signal(obj, { domain: this.#domain, name });
-    this.#signals.set(name, objectSignal);
-    return objectSignal;
-  }
+  // // --- Creation ---
+  // newValue(name, value) {
+  //  const valueSignal = new Signal(value, { domain: this.#domain, name });
+  //   this.#signals.set(name, valueSignal);
+  //   return valueSignal;
+  // }
 
-  set(name, signal) {
-    this.#signals.set(name, signal);
+  // newArray(name, ...initial) {
+  //  const arraySignal = new Signal(initial, { domain: this.#domain, name });
+  //   this.#signals.set(name, arraySignal);
+  //   return arraySignal;
+  // }
+
+  // newObject(name, ...initial) {
+  //  const objectSignal = new Signal(obj, { domain: this.#domain, name });
+  //   this.#signals.set(name, objectSignal);
+  //   return objectSignal;
+  // }
+
+
+
+
+  set(name, value=null) {
+    let signal;
+    if(this.#signals.has(name)){
+     signal = this.#signals.get(name);
+    }else{
+     signal = new Signal(value, { domain: this.#domain, name });
+     this.#signals.set(name, signal);
+    }
+    signal.value = value;
     return signal;
   }
 
   get(name) {
     return this.#signals.get(name);
   }
+
+
+
+
+
 
   // --- Mutations with Undo ---
   setValue(name, value) {
@@ -78,11 +97,7 @@ export class State {
     const signal = this.get(objectName);
     if (!signal) throw new Error(`Signal ${objectName} not found`);
     const oldValue = { ...signal.value };
-    const doChange = () => {
-      const obj = { ...signal.value };
-      delete obj[key];
-      signal.value = obj;
-    };
+    const doChange = () => { const obj = { ...signal.value }; delete obj[key]; signal.value = obj; };
     const undoChange = () => (signal.value = oldValue);
 
     doChange();

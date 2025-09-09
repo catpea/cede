@@ -4,7 +4,7 @@
 
 export class Signal {
   #rev = 0;
-  #revId = this.#generateId();
+  #revId = this.#uuid();
   #conflicts = [];
 
   #id;
@@ -25,7 +25,7 @@ export class Signal {
 
     const options = Object.assign(defaults, config);
 
-    this.#id = options.id ?? this.#generateId();
+    this.#id = options.id ?? this.#uuid();
     this.#domain = options.domain;
     this.#name = options.name;
 
@@ -107,7 +107,7 @@ export class Signal {
 
     this.#value = newValue;
     this.#rev++;
-    this.#revId = this.#generateId();
+    this.#revId = this.#uuid();
 
     localStorage.setItem( this.domain +'-'+ this.name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
 
@@ -210,7 +210,7 @@ export class Signal {
     return this.value;
   }
 
-  #generateId() {
+  #uuid() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
       return crypto.randomUUID();
     } else {
