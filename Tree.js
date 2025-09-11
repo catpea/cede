@@ -1,5 +1,7 @@
 import { Signal } from "./Signal.js";
 import { State } from "./State.js";
+import { TreeNavigator } from "./TreeNavigator.js";
+import { TreeGenerator } from "./TreeGenerator.js";
 
 export class Tree {
   #state;
@@ -7,19 +9,22 @@ export class Tree {
 
   constructor(domain) {
     this.#state = new State(domain);
+    this.treeGenerator = new TreeGenerator(this.#data, this.#state, { debug: true });
+    this.treeNavigator = new TreeNavigator(this.#data, { debug: true });
   }
 
   mk(path, data = null) {
-    return this.upsertTree(path, data);
+    return this.treeGenerator.write(path, data);
+    // return this.upsertTree(path, data);
   }
 
   read(path) {
-    const node = this.lookupTree(path);
-    if (node) return node.signal;
+    const node = this.treeNavigator.read(path);
+    if (node) return node ;
   }
 
   write(path, value) {
-    const node = this.lookupTree(path);
+    const node = this.treeNavigator.read(path);
     if (!node) throw new Error(`Path not found. Create the path with mk prior to use. (${path})`);
 
     if (node.signal instanceof Signal) {
@@ -105,90 +110,8 @@ export class Tree {
   //   return node;
   // }
 
-
   // New upsertTree: always returns the Signal at the leaf
-    upsertTree(path, data = {}) {
-      const segments = path.replace(/^[/]+|[/]+$/, "").split(/[/]/);
-      let node = this.#data;
-      let signal = null;
 
-      for (let i = 0; i < segments.length; i++) {
-        const key = segments[i];
-        const isLast = i === segments.length - 1;
-        const ext = this.ext(key);
-
-        // Only handle .arr and .obj extensions, everything else is treated as plain object or signal
-        if (ext === "arr") {
-          if (!node[key]) {
-            const id = this.#uuid();
-            const arrSignal = this.#state.set(id, []);
-            node[key] = { id, ext, signal: arrSignal };
-          }
-          node = node[key];
-          if (!isLast && /^\d+$/.test(segments[i + 1])) {
-            i++;
-            const idx = parseInt(segments[i], 10);
-            if (!node.signal.value[idx]) node.signal.value[idx] = {};
-            node = node.signal.value[idx];
-          }
-        } else if (ext === "obj") {
-          if (!node[key]) {
-            const id = this.#uuid();
-            const objSignal = this.#state.set(id, {});
-            node[key] = { id, ext, signal: objSignal };
-          }
-          node = node[key];
-        } else {
-          if (isLast) {
-            // Final leaf: create signal if not present
-            if (!node[key]) {
-              const id = this.#uuid();
-              signal = this.#state.set(id, data);
-              node[key] = { id, ext: null, signal };
-            } else if (!node[key].signal) {
-              // Patch in signal if not present
-              const id = this.#uuid();
-              signal = this.#state.set(id, data);
-              node[key].signal = signal;
-            } else {
-              // Use existing signal
-              signal = node[key].signal;
-              // Optionally update value if you want to overwrite
-              // signal.value = data;
-            }
-            return node[key].signal;
-          } else {
-            if (!node[key]) node[key] = {};
-            node = node[key];
-          }
-        }
-      }
-      // Defensive: If we exit the loop, return the signal if present
-      return node?.signal;
-    }
-
-
-  lookupTree(path) {
-    const segments = path.replace(/^[/]+|[/]+$/, "").split(/[/]/);
-    let node = this.#data;
-    for (let i = 0; i < segments.length; i++) {
-      const key = segments[i];
-      const ext = this.ext(key);
-
-      if (node && node[key]) {
-        node = node[key];
-        if (node.signal && ext === "arr" && i + 1 < segments.length && /^\d+$/.test(segments[i + 1])) {
-          // Next segment is array index, descend into signal.value
-          node = node.signal.value;
-          i++;
-          node = node[parseInt(segments[i], 10)];
-        }
-      } else {
-        return undefined;
-      }
-    }
-    return node;
-  }
 
   dump() {
     console.log(this.#data);

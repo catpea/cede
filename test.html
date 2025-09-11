@@ -30,29 +30,31 @@
 
       tree.write('/my-app/user/profile.obj/firstName', 'alice');
       tree.write('/my-app/user/profile.obj/lastName', 'Kingsleigh');
-      tree.mk('/my-app/user/color.arr/0/color', '#ff0000');
+      // tree.mk('/my-app/user/color.arr/0/color', '#ff0000');
 
       lastName.subscribe(console.log);
 
-      // array test, and not clobering existing objects
+      // // array test, and not clobering existing objects
 
-      tree.mk('/my-app/colorStops.arr');
+      // tree.mk('/my-app/colorStops.arr/0/color');
+      tree.mk('/my-app/colorStops.arr/0/percent', '0');
+      tree.mk('/my-app/colorStops.arr/0/color', '#ff0000');
 
-      tree.mk('/my-app/colorStops.arr/0/color');
-      tree.mk('/my-app/colorStops.arr/1/color');
-      tree.mk('/my-app/colorStops.arr/2/color');
+      tree.mk('/my-app/colorStops.arr/1/percent', '50');
+      tree.mk('/my-app/colorStops.arr/2/percent', '50');
 
-      tree.mk('/my-app/colorStops.arr/0/percentage');
-      tree.mk('/my-app/colorStops.arr/1/percentage');
-      tree.mk('/my-app/colorStops.arr/2/percentage');
+      // tree.mk('/my-app/colorStops.arr/1/color');
+      // tree.mk('/my-app/colorStops.arr/2/color');
 
-      tree.write('/my-app/colorStops.arr/0/color', '#ff0000');
-      tree.write('/my-app/colorStops.arr/1/color', '#00ff00');
-      tree.write('/my-app/colorStops.arr/2/color', '#0000ff');
+      // tree.mk('/my-app/colorStops.arr/0/percentage');
+      // tree.mk('/my-app/colorStops.arr/1/percentage');
+      // tree.mk('/my-app/colorStops.arr/2/percentage');
 
-      tree.write('/my-app/colorStops.arr/0/percentage', 0);
-      tree.write('/my-app/colorStops.arr/1/percentage', 50);
-      tree.write('/my-app/colorStops.arr/2/percentage', 100);
+      tree.mk('/my-app/colorStops.arr/1/color', '#00ff00');
+      tree.mk('/my-app/colorStops.arr/2/color', '#0000ff');
+
+      // tree.write('/my-app/colorStops.arr/1/percentage', 50);
+      // tree.write('/my-app/colorStops.arr/2/percentage', 100);
 
       // const disposable1 = new DisposableSignalListener(state.get('hello'), console.log)
       // const disposable2 = new DisposableSingleDirectionBinder(state.get('hello'), helloWorldElement);
@@ -61,7 +63,14 @@
 
       const disposableFirstName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/firstName'), firstNameInput);
       const disposableLastName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/lastName'), lastNameInput);
+
       tree.dump();
+
+      // console.log('@@@ 0', tree.read('/my-app/colorStops.arr/0'))
+
+      // console.log('@@@ 0', tree.read('/my-app/colorStops.arr/0/color'))
+
+
 
 
     </script>

@@ -1,7 +1,3 @@
-// ===============
-// State.js
-// ===============
-
 import { Signal } from "./Signal.js";
 
 export class State {
