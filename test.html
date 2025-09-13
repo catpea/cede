@@ -1,38 +1,31 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
     <title>cede: State Kernel Demo</title>
     <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    * { margin: 0; }
-    html { color-scheme: light dark; line-height: 1.15; -webkit-text-size-adjust: 100%; -moz-tab-size: 4; tab-size: 4; padding: 3vh 5vw;}
+      *, *::before, *::after { box-sizing: border-box; } * { margin: 0; }
+      html { color-scheme: light dark; line-height: 1.15; -webkit-text-size-adjust: 100%; -moz-tab-size: 4; tab-size: 4; padding: 3vh 5vw; }
     </style>
   </head>
   <body>
     <h1 id="helloWorldElement">Hello, world!</h1>
-    <input type="text" id="helloWorldInput"></input>
-
-    <input type="text" id="firstNameInput"></input>
-    <input type="text" id="lastNameInput"></input>
-
+    <input type="text" id="helloWorldInput" />
+    <input type="text" id="firstNameInput" />
+    <input type="text" id="lastNameInput" />
     <h1 id="inputPreviewElement">Hello, world!</h1>
-
-
     <h1>Test Results</h1>
-     <pre id="output"></pre>
+    <pre id="output"></pre>
 
-     <script type="module">
+    <script type="module">
+      import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
 
-       import { test, describe, it, waitForCompletion } from './modules/cletus/cletus.js';
+      import { Tree } from "./Tree.js";
 
-      import { Tree } from './Tree.js';
-
-       describe('Tree operations', () => {
-
-        const tree = new Tree('kernel-test', false);
+      describe("Tree operations", () => {
+        const tree = new Tree("kernel-test", false);
 
         // tree.load({
         //   "my-app": {
@@ -50,145 +43,50 @@
         // });
         // tree.dump();
 
-         it('should create profile.obj/password', () => {
+        // it("should create profile.obj", () => {
+          const expected = { password:"hunter2" };
+          const password = tree.mk("/my-app/user/profile.obj", expected);
+          const actual = password.signal.value;
 
-           const expected = 'hunter2';
-           const password = tree.mk('/my-app/user/profile.obj/password', expected );
-           const actual = password.value;
-           console.assert(actual == expected);
+          console.assert(actual == expected);
+          console.log(actual, expected)
+        // });
 
-         });
+        // it("should create profile.obj/password", () => {
+        //   const expected = "hunter2";
+        //   const password = tree.mk("/my-app/user/profile.obj/password", expected);
+        //   const actual = password.value;
+        //   console.assert(actual == expected);
+        // });
 
+        // it("should create gradient.arr/0/color", () => {
+        //   const expected = "#ff0000";
+        //   const gradient = tree.mk("/my-app/workspace/gradient.arr/0/color", expected);
+        //   const actual = gradient.value;
+        //   console.assert(actual == expected);
+        // });
 
+        // it("should create gradient.arr/0/percent", () => {
+        //   const expected = 0;
+        //   const percent = tree.mk("/my-app/workspace/gradient.arr/0/percent", expected);
+        //   const actual = percent.value;
+        //   console.assert(actual == expected);
+        // });
 
-         it('should create gradient.arr/0/color', () => {
+        it("should return a serializable JSON", { todo: false }, () => {
+          // console.log( tree.save() );
+          // const result = tree.load();
+          console.log("FLATTENED");
+          const flat = tree.flatten();
+          console.table(flat);
+          // console.log(JSON.stringify(flat, 0, 2));
+          // flat.forEach(o=>tree.mk(o))
+        });
+      });
 
-           const expected = '#ff0000';
-           const gradient = tree.mk('/my-app/workspace/gradient.arr/0/color', expected);
-           const actual = gradient.value;
-           console.assert(actual == expected);
-
-         });
-
-         it('should create gradient.arr/0/percent', () => {
-
-           const expected = 0;
-           const percent = tree.mk('/my-app/workspace/gradient.arr/0/percent', expected);
-           const actual = percent.value;
-           console.assert(actual == expected);
-
-         });
-
-         it('should return a serializable JSON', { todo: false }, () => {
-
-           console.log( tree.save() );
-           const result = tree.load();
-         //   // console.log('LOADED', result)
-         //   // tree()
-
-         });
-
-
-
-       });
-
-       // Wait for tests to complete and display results
-       const results = await waitForCompletion();
-       document.getElementById('output').textContent =
-         `Passed: ${results.summary.passed}\n` +
-         `Failed: ${results.summary.failed}\n` +
-         `Total: ${results.summary.total}`;
-     </script>
-
-
-
-
-
-
-    <script type="x-module">
-
-      import { Tree } from './Tree.js';
-      import { test, describe, it,  waitForCompletion} from './modules/cletus/cletus.js';
-
-      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from './Disposables.js';
-
-      describe('Browser tests', () => {
-
-        const tree = new Tree('kernel-test');
-
-         it('should have access to DOM', () => {
-           const div = document.createElement('div');
-           console.assert(div instanceof HTMLElement);
-         });
-
-         it('should create username signal', () => {
-           const expected = 'alice';
-           const username = tree.mk('/my-app/user/profile.obj/username', expected);
-           console.assert(username.value == expected);
-         });
-
-
-
-       });
-      // Wait for all tests to complete
+      // Wait for tests to complete and display results
       const results = await waitForCompletion();
-      console.log('Tests complete:', results.summary);
-      console.log('Tests complete:', results );
-
-      // const tree = new Tree('kernel-test');
-      // tree.load();
-
-      const  firstName = tree.mk('/my-app/user/profile.obj/firstName', 'Alice');
-      firstName.subscribe(console.log);
-
-      const lastName = tree.mk('/my-app/user/profile.obj/lastName');
-
-      tree.write('/my-app/user/profile.obj/firstName', 'alice');
-      tree.write('/my-app/user/profile.obj/lastName', 'Kingsleigh');
-      // tree.mk('/my-app/user/color.arr/0/color', '#ff0000');
-
-      lastName.subscribe(console.log);
-
-      // // array test, and not clobering existing objects
-
-      // tree.mk('/my-app/colorStops.arr/0/color');
-      tree.mk('/my-app/colorStops.arr/0/percent', '0');
-      tree.mk('/my-app/colorStops.arr/0/color', '#ff0000');
-
-      tree.mk('/my-app/colorStops.arr/1/percent', '50');
-      tree.mk('/my-app/colorStops.arr/2/percent', '50');
-
-      // tree.mk('/my-app/colorStops.arr/1/color');
-      // tree.mk('/my-app/colorStops.arr/2/color');
-
-      // tree.mk('/my-app/colorStops.arr/0/percentage');
-      // tree.mk('/my-app/colorStops.arr/1/percentage');
-      // tree.mk('/my-app/colorStops.arr/2/percentage');
-
-      tree.mk('/my-app/colorStops.arr/1/color', '#00ff00');
-      tree.mk('/my-app/colorStops.arr/2/color', '#0000ff');
-
-      // tree.write('/my-app/colorStops.arr/1/percentage', 50);
-      // tree.write('/my-app/colorStops.arr/2/percentage', 100);
-
-      // const disposable1 = new DisposableSignalListener(state.get('hello'), console.log)
-      // const disposable2 = new DisposableSingleDirectionBinder(state.get('hello'), helloWorldElement);
-      // const disposable4 = new DisposableSingleDirectionBinder(state.get('jello'), inputPreviewElement);
-
-
-      // const disposableFirstName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/firstName'), firstNameInput);
-      // const disposableLastName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/lastName'), lastNameInput);
-
-      tree.dump();
-      // tree.save();
-
-      // console.log('@@@ 0', tree.read('/my-app/colorStops.arr/0'))
-
-      // console.log('@@@ 0', tree.read('/my-app/colorStops.arr/0/color'))
-
-
-
-
+      document.getElementById("output").textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n` + `Total: ${results.summary.total}`;
     </script>
   </body>
 </html>

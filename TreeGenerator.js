@@ -118,7 +118,7 @@ export class TreeGenerator {
     const state = segments.reduce(this.reducer.bind(this), { node: this.#data, mode: "plain" });
 
     if(state.node.ext){
-    state.node.signal.value = data;
+      state.node.signal.value = data;
     }else{
       state.node.value = data;
     }

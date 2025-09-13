@@ -38,6 +38,14 @@ export class State {
 
 
 
+  clear(){
+
+    for (const signal of this.#signals.values() ){
+      signal.dispose();
+    }
+    this.#signals.clear();
+
+  }
 
   set(name, value=null) {
     let signal;

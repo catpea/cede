@@ -55,7 +55,6 @@ export class Signal {
     this.#readSubscribers = new Set();
     this.#disposables = new Set();
 
-    this.readonly = Object.freeze({ value: () => this.peek() });
 
     if (this.#usePersistence) this.initializePersistence();
     if (this.#useSynchronization) this.addDisposable(this.synchronize());
@@ -115,6 +114,9 @@ export class Signal {
   }
   get domain() {
     return this.#domain;
+  }
+  get readonly() {
+    return Object.freeze({ value: () => this.peek() });
   }
 
   // Value System
@@ -250,66 +252,11 @@ export class Signal {
   }
 
   toJSON(){
-    return {
-
-      name: this.#name,
-      domain: this.#domain,
-      content: this.serialize(this.#value),
-    }
+    return { key: `${this.#domain}--${this.#name}`, val: this.serialize(this.#value) };
   }
 
   isSignal(obj) {
     return obj && typeof obj.toJSON === 'function';
-  }
-
-  serialize(value, seen = new WeakMap()) {
-    // primitives
-    if (value === null || typeof value !== 'object') return value;
-
-    // handle circular refs
-    if (seen.has(value)) return seen.get(value);
-
-    // If it's a Signal, call toJSON and then continue serializing the result
-    if (this.isSignal(value)) {
-      const serialized = value.toJSON();
-      return this.serialize(serialized, seen);
-    }
-
-    // Arrays
-    if (Array.isArray(value)) {
-      const arr = [];
-      seen.set(value, arr);
-      for (let i = 0; i < value.length; i++) {
-        arr[i] = this.serialize(value[i], seen);
-      }
-      return arr;
-    }
-
-    // Map
-    if (value instanceof Map) {
-      const m = new Map();
-      seen.set(value, m);
-      for (const [k, v] of value.entries()) {
-        m.set(this.serialize(k, seen), this.serialize(v, seen));
-      }
-      return m;
-    }
-
-    // Set
-    if (value instanceof Set) {
-      const s = new Set();
-      seen.set(value, s);
-      for (const v of value.values()) s.add(this.serialize(v, seen));
-      return s;
-    }
-
-    // Plain object (including class instances without toJSON)
-    const out = {};
-    seen.set(value, out);
-    for (const key of Object.keys(value)) {
-      out[key] = this.serialize(value[key], seen);
-    }
-    return out;
   }
 
   [Symbol.toPrimitive](hint) {
@@ -329,5 +276,60 @@ export class Signal {
     } else {
       return Math.random().toString(36).slice(2);
     }
+  }
+
+  serialize(value = this.#value, seen = new WeakMap()) {
+    // primitives
+    if (value === null || typeof value !== 'object') return value;
+
+    // handle circular refs
+    if (seen.has(value)) return seen.get(value);
+
+    // If it's a Signal, call toJSON and then continue serializing the result
+    if (this.isSignal(value)) {
+      const serialized = value.toJSON();
+      return this.serialize(serialized, seen);
+    }
+
+    // Arrays
+    if (Array.isArray(value)) {
+      const arr = [];
+      seen.set(value, arr); // ✓ This is correct - set before recursing
+      for (let i = 0; i < value.length; i++) {
+        arr[i] = this.serialize(value[i], seen);
+      }
+      return arr;
+    }
+
+    // Add Date handling
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    // Map - correct as is
+    if (value instanceof Map) {
+      const m = new Map();
+      seen.set(value, m);
+      for (const [k, v] of value.entries()) {
+        m.set(this.serialize(k, seen), this.serialize(v, seen));
+      }
+      return m;
+    }
+
+    // Set - correct as is
+    if (value instanceof Set) {
+      const s = new Set();
+      seen.set(value, s);
+      for (const v of value.values()) s.add(this.serialize(v, seen));
+      return s;
+    }
+
+    // Plain object - correct as is
+    const out = {};
+    seen.set(value, out);
+    for (const key of Object.keys(value)) {
+      out[key] = this.serialize(value[key], seen);
+    }
+    return out;
   }
 }
