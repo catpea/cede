@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "demo": "http-server -c-1 -o .",
+    "modules": "rsync -avL --exclude='.*' --exclude='_unused' ./node_modules/* ./modules/",
     "save": "git add .; git commit -m 'Updated Release'; npm version patch; npm publish; git push --follow-tags;"
   },
   "keywords": [
@@ -21,5 +22,11 @@
   "bugs": {
     "url": "https://github.com/catpea/cede/issues"
   },
-  "homepage": "https://github.com/catpea/cede#readme"
+  "homepage": "https://github.com/catpea/cede#readme",
+  "dependencies": {
+    "cletus": "^1.0.2"
+  },
+  "localDependencies": {
+    "../cletus/": "^1.0.2"
+  }
 }

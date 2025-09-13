@@ -1,26 +1,28 @@
 import { Signal } from "./Signal.js";
 import { State } from "./State.js";
+
+import { TreeWalker } from "./TreeWalker.js";
 import { TreeNavigator } from "./TreeNavigator.js";
 import { TreeGenerator } from "./TreeGenerator.js";
 
 export class Tree {
+  #domain;
   #state;
   #data = {};
 
-  constructor(domain) {
+  constructor(domain, debug = false) {
+    this.#domain = domain;
     this.#state = new State(domain);
-    this.treeGenerator = new TreeGenerator(this.#data, this.#state, { debug: true });
-    this.treeNavigator = new TreeNavigator(this.#data, { debug: true });
+    this.treeGenerator = new TreeGenerator(this.#data, this.#state, { debug });
+    this.treeNavigator = new TreeNavigator(this.#data, { debug });
   }
 
   mk(path, data = null) {
     return this.treeGenerator.write(path, data);
-    // return this.upsertTree(path, data);
   }
 
   read(path) {
-    const node = this.treeNavigator.read(path);
-    if (node) return node ;
+    return this.treeNavigator.read(path);
   }
 
   write(path, value) {
@@ -39,84 +41,76 @@ export class Tree {
     return path.match(/[.]([\w\d]+)$/)?.[1] || "";
   }
 
-  // New upsertTree
-  // upsertTree(path, data = {}) {
-  //   const segments = path.replace(/^[/]+|[/]+$/, "").split(/[/]/);
-  //   let node = this.#data;
-  //   let parent = null;
-  //   let key = null;
+  toJSON() {
+    const walker = new TreeWalker();
+    // Optionally override visitor:
+    walker.visitor = (key, node, parent, path) => {
 
-  //   for (let i = 0; i < segments.length; i++) {
-  //     key = segments[i];
-  //     const isLast = i === segments.length - 1;
-  //     const ext = this.ext(key);
-  //     const hasExt = !!ext;
+      if (node.ext) return { id: node.id, __signal: node.signal.toJSON() };
+      // if (node.ext) return { pointer: this.#domain +'-'+ node.id };
 
-  //     // For .arr or .obj, treat differently
-  //     if (hasExt) {
-  //       // If .arr, ensure node[key] is an array signal
-  //       if (ext === "arr") {
-  //         if (!node[key]) {
-  //           const id = this.#uuid();
-  //           const signal = this.#state.set(id, []);
-  //           node[key] = { id, ext, signal };
-  //         }
-  //         // For array indices, descend into signal.value (the array)
-  //         if (!isLast && /^\d+$/.test(segments[i + 1])) {
-  //           // Next is array index, descend
-  //           node = node[key].signal.value;
-  //           i++;
-  //           const idx = parseInt(segments[i], 10);
-  //           if (!node[idx]) node[idx] = {};
-  //           parent = node;
-  //           node = node[idx];
-  //           continue;
-  //         }
-  //         parent = node;
-  //         node = node[key];
-  //       } else if (ext === "obj") {
-  //         if (!node[key]) {
-  //           const id = this.#uuid();
-  //           const signal = this.#state.set(id, {});
-  //           node[key] = { id, ext, signal };
-  //         }
-  //         parent = node;
-  //         node = node[key];
-  //       } else {
-  //         // Other extensions: treat as leaf signal
-  //         if (!node[key]) {
-  //           const id = this.#uuid();
-  //           const signal = this.#state.set(id, isLast ? data : {});
-  //           node[key] = { id, ext, signal };
-  //         }
-  //         parent = node;
-  //         node = node[key];
-  //       }
-  //     } else {
-  //       // Plain key, not extension
-  //       if (!node[key]) node[key] = {};
-  //       parent = node;
-  //       node = node[key];
-  //     }
-  //   }
+      // const hasExtension = Object.hasOwn(node, "ext");
+      // if (hasExtension) return { id: node.id };
 
-  //   // At leaf: If node is signal container, update value if present
-  //   if (node.signal instanceof Signal && data !== undefined) {
-  //     // Only update if data is not undefined
-  //     node.signal.value = data;
-  //     return node.signal;
-  //   }
-  //   // If node is just plain object, return as is
-  //   return node;
-  // }
+      // if (key === 'signal' && node && typeof node.toJSON === 'function') return node.toJSON();
 
-  // New upsertTree: always returns the Signal at the leaf
+      return undefined;
+    };
 
+    const result = walker.walk( this.#data );
+    return result;
+  }
+
+  stringify() {
+    return JSON.stringify(this, null, 2);
+  }
+
+  save() {
+    const content = this.stringify();
+    localStorage.setItem(this.#domain, content);
+    return content;
+  }
+
+  hydrated() {
+    const dehydrated = localStorage.getItem(this.#domain);
+    console.log('dehydrated:', dehydrated);
+    if (dehydrated !== null) return JSON.parse(dehydrated);
+  }
+  load(data) {
+    if (!data) data = this.hydrated();
+
+    const walker = new TreeWalker();
+    walker.visitor = (key, node, parent, path) => {
+      // Check if node is an object with an 'id' property
+
+       console.log('###', key, node, path.includes('__signal')) ;
+      if (node && typeof node === "object" && path.includes('__signal')) {
+      }
+
+      if (node && typeof node === "object" && "id" in node) {
+        // Return replacement - this replaces the ENTIRE node
+        return {
+          id: node.id,
+          replacedAt: new Date().toISOString(),
+          originalPath: path.join("/"),
+          ext: this.ext(key),
+
+          // TODO use __signal based on dat in )))signal create a nested signal object
+
+          signal: this.#state.get(node.id),
+        };
+      }
+      return undefined;
+    };
+    this.#data = walker.walk(data);
+  }
 
   dump() {
     console.log(this.#data);
   }
-
+  hasExtension(key) {
+    return key.endsWith(".arr") || key.endsWith(".obj");
+  }
   #uuid() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
       return crypto.randomUUID();

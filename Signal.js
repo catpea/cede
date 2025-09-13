@@ -8,7 +8,7 @@ export class Signal {
   #conflicts = [];
 
   #id;
-  #name
+  #name;
   #domain;
 
   #value;
@@ -18,44 +18,94 @@ export class Signal {
 
   #disposables;
 
-  #schedule;
+  #useScheduling;
+  #usePersistence;
+  #useSynchronization; // autowarch localstorage
+
+  #conflicting;
 
   constructor(value, config) {
-    const defaults = { domain: false, name: "unnamed", schedule: false, onRead: false };
+    const defaults = {
+      domain: "signal",
+      name: "unnamed",
 
-    const options = Object.assign(defaults, config);
+      conflicting: 16,
+
+      persistence: false,
+      scheduling: false,
+      synchronization: false,
+    };
+
+    const options = Object.assign({}, defaults, config);
 
     this.#id = options.id ?? this.#uuid();
+
     this.#domain = options.domain;
     this.#name = options.name;
 
-    this.#schedule = options.schedule; // scheduler support
+    this.#conflicting = options.conflicting; // how many conflicting revisions are kept on file
 
-    if (options.onRead) this.onRead(options.onRead);
+    this.#useScheduling = options.scheduling; // scheduling support
+    this.#usePersistence = options.persistence; // persistence support
+    this.#useSynchronization = options.synchronization; // synchronization support
 
     this.#value = value;
-
-
 
     this.#changeSubscribers = new Set();
     this.#readSubscribers = new Set();
     this.#disposables = new Set();
 
-    this.readonly = () => ({
-      get value() {
-        return this.value;
-      },
-    });
+    this.readonly = Object.freeze({ value: () => this.peek() });
+
+    if (this.#usePersistence) this.initializePersistence();
+    if (this.#useSynchronization) this.addDisposable(this.synchronize());
+  }
+
+  // Persistence Layer
+
+  initializePersistence() {
 
 
-    const currentValue = localStorage.getItem( this.domain +'-'+ this.name) ;
+    const currentValue = localStorage.getItem(this.#domain + "-" + this.#name);
+
     if (currentValue === null) {
-      localStorage.setItem( this.domain +'-'+ this.name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
-    }else{
-        this.sync(JSON.parse(currentValue));
+
+      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }));
+
+    } else {
+      this.sync(JSON.parse(currentValue));
     }
 
   }
+
+  synchronize() {
+    const watcher = (event) => {
+      if (event.key === this.#domain + "-" + this.#name) {
+        this.sync(JSON.parse(event.newValue));
+      }
+    };
+    window.addEventListener("storage", watcher);
+    return () => window.removeEventListener("storage", watcher);
+  }
+
+  sync({ rev, revId, value }) {
+    // evId tie-break uses string comparison.
+
+    if(rev == this.#rev){
+      this.#conflicts.push({ rev, revId, value });
+      if (this.#conflicts.length > this.#conflicting) this.#conflicts.splice(0, this.#conflicts.length - this.#conflicting);
+    }
+
+    if (rev > this.#rev) {
+      this.set(value, rev++); // +1 prevents conflicts
+    } else if (rev == this.#rev && revId > this.#revId) {
+      this.set(value, rev++);
+    } else {
+      // ignore because revision is lower than the current
+    }
+  }
+
+  // Getters / Information
 
   get id() {
     return this.#id;
@@ -66,6 +116,8 @@ export class Signal {
   get domain() {
     return this.#domain;
   }
+
+  // Value System
 
   peek() {
     return this.#value;
@@ -80,56 +132,62 @@ export class Signal {
     return this.#value;
   }
 
-  watch() {
-    const watcher = (event) => {
-      if (event.key === this.domain +'-'+ this.name) {
-        this.sync(JSON.parse(event.newValue));
-      }
-    };
-    window.addEventListener("storage", watcher);
-    return () => window.removeEventListener("storage", watcher);
+  set value(v) {
+    this.set(v)
   }
 
-  sync({ rev, revId, value }) {
-    if (rev > this.#rev) {
-      this.#rev = rev; // set to equal, it is incremented later
-      this.value = value;
-    } else if (rev == this.#rev && revId > this.#revId) {
-      this.value = value;
-      this.#conflicts.push({ rev, revId, value });
-    } else {
-      // ignore because revision is lower than the current
-    }
-  }
-
-  set value(newValue) {
+  set(newValue, rev=null, bump=true){
     if (Object.is(newValue, this.#value)) return;
 
     this.#value = newValue;
-    this.#rev++;
-    this.#revId = this.#uuid();
 
-    localStorage.setItem( this.domain +'-'+ this.name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }) );
+    if(bump){
+      this.#rev = rev||this.#rev++;
+      this.#revId = this.#uuid();
+    }
+
+    if (this.#usePersistence) {
+      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }));
+    }
 
     this.notify();
   }
 
+  // Detect Writes
+  // NOTE: Subscribers stored in Sets persist until unsubscribed/disposing;
   subscribe(subscriber, autorun = true) {
-    if (typeof subscriber !== "function")
-      throw new Error("Subscriber must be a function");
-    if (autorun && this.#value != null) subscriber(this.#value);
+    if (typeof subscriber !== "function") throw new Error("Subscriber must be a function");
+
+    if (autorun && this.#value !== undefined && this.#value !== null) subscriber(this.#value);
+
     this.#changeSubscribers.add(subscriber);
     return () => this.unsubscribe(subscriber);
   }
-
   unsubscribe(subscriber) {
     this.#changeSubscribers.delete(subscriber);
   }
 
-  onRead(subscriber) {
+  // Detect Reads
+
+  sniff(subscriber) {
     this.#readSubscribers.add(subscriber);
-    return () => this.#readSubscribers.delete(subscriber);
+    return () => this.unsniff(subscriber);
   }
+  unsniff(subscriber) {
+    this.#readSubscribers.delete(subscriber);
+  }
+
+  // Notifications
+
+  notify() {
+    if (this.#useScheduling) {
+      for (const subscriber of this.#changeSubscribers) this.scheduler(subscriber);
+    } else {
+      for (const subscriber of this.#changeSubscribers) subscriber(this.#value);
+    }
+  }
+
+  // Scheduler
 
   #scheduleQueue = new Set();
   #schedulePending = false;
@@ -146,15 +204,7 @@ export class Signal {
     }
   }
 
-  notify() {
-    if (this.#schedule) {
-      for (const subscriber of this.#changeSubscribers)
-        this.scheduler(subscriber);
-    } else {
-      for (const subscriber of this.#changeSubscribers)
-        subscriber(this.#value);
-    }
-  }
+  // Garbage Collection
 
   dispose() {
     this.#readSubscribers.clear();
@@ -163,11 +213,11 @@ export class Signal {
     this.#disposables.clear();
   }
 
-  addDisposable(...input) {
-    [input].flat(Infinity).forEach((disposable) =>
-      this.#disposables.add(disposable)
-    );
+  addDisposable(...disposables) {
+    disposables.flat(Infinity).forEach(d => this.#disposables.add(d));
   }
+
+  // Static Functions
 
   static filter(parent, test) {
     const child = new Signal();
@@ -194,11 +244,72 @@ export class Signal {
       const nullish = values.some((value) => value == null);
       if (!nullish) child.value = values;
     };
-    const subscriptions = parents.map((signal) =>
-      signal.subscribe(updateCombinedValue)
-    );
+    const subscriptions = parents.map((signal) => signal.subscribe(updateCombinedValue));
     child.addDisposable(subscriptions);
     return child;
+  }
+
+  toJSON(){
+    return {
+
+      name: this.#name,
+      domain: this.#domain,
+      content: this.serialize(this.#value),
+    }
+  }
+
+  isSignal(obj) {
+    return obj && typeof obj.toJSON === 'function';
+  }
+
+  serialize(value, seen = new WeakMap()) {
+    // primitives
+    if (value === null || typeof value !== 'object') return value;
+
+    // handle circular refs
+    if (seen.has(value)) return seen.get(value);
+
+    // If it's a Signal, call toJSON and then continue serializing the result
+    if (this.isSignal(value)) {
+      const serialized = value.toJSON();
+      return this.serialize(serialized, seen);
+    }
+
+    // Arrays
+    if (Array.isArray(value)) {
+      const arr = [];
+      seen.set(value, arr);
+      for (let i = 0; i < value.length; i++) {
+        arr[i] = this.serialize(value[i], seen);
+      }
+      return arr;
+    }
+
+    // Map
+    if (value instanceof Map) {
+      const m = new Map();
+      seen.set(value, m);
+      for (const [k, v] of value.entries()) {
+        m.set(this.serialize(k, seen), this.serialize(v, seen));
+      }
+      return m;
+    }
+
+    // Set
+    if (value instanceof Set) {
+      const s = new Set();
+      seen.set(value, s);
+      for (const v of value.values()) s.add(this.serialize(v, seen));
+      return s;
+    }
+
+    // Plain object (including class instances without toJSON)
+    const out = {};
+    seen.set(value, out);
+    for (const key of Object.keys(value)) {
+      out[key] = this.serialize(value[key], seen);
+    }
+    return out;
   }
 
   [Symbol.toPrimitive](hint) {
@@ -210,11 +321,13 @@ export class Signal {
     return this.value;
   }
 
+  // Helper Functions
+
   #uuid() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
       return crypto.randomUUID();
     } else {
-      return Math.random().toString(36).substr(2);
+      return Math.random().toString(36).slice(2);
     }
   }
 }

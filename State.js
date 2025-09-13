@@ -44,7 +44,13 @@ export class State {
     if(this.#signals.has(name)){
      signal = this.#signals.get(name);
     }else{
-     signal = new Signal(value, { domain: this.#domain, name });
+      const options = {
+        name,
+        domain: this.#domain,
+        persistence: true,
+        synchronization: true,
+      };
+     signal = new Signal(value, options);
      this.#signals.set(name, signal);
     }
     signal.value = value;

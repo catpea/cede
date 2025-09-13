@@ -10,6 +10,9 @@ class GeneratorState {
     return key.endsWith(".arr") || key.endsWith(".obj");
   }
   uuid() {
+    // if(!globalThis.mockId) globalThis.mockId = 0;
+    // return globalThis.mockId++
+
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
       return crypto.randomUUID();
     } else {
@@ -31,9 +34,8 @@ class PlainState extends GeneratorState {
       if (this.nextState(key) == "ext") {
         const id = this.uuid();
         const ext = this.ext(key);
-        console.log("@@", key, ext);
+
         const signal = this.state.set(id, ext == "arr" ? [] : {});
-        node[key].by = "PlainState";
         node[key].id = id;
         node[key].ext = ext;
         node[key].signal = signal;
@@ -56,9 +58,7 @@ class ExtState extends GeneratorState {
     if (!extensionSignal.value[extensionSignalKey]) {
       const id = this.uuid();
       const ext = this.ext(extensionSignalKey);
-      const signal = this.state.set(id, ext == "arr" ? ["ArrExtState"] : { by: "ObjExtState" });
-      console.info("ASSIGNTO", node.ext, extensionSignalKey, ext, extensionSignal.value, extensionSignal.value[extensionSignalKey]);
-
+      const signal = this.state.set(id, ext == "arr" ? [] : {});
       extensionSignal.value[extensionSignalKey] = signal;
     }
 
@@ -77,17 +77,17 @@ class SignalState extends GeneratorState {
 
     if (!node.value[key]) {
       const id = this.uuid();
-      const signal = this.state.set(id, { by: "SignalState" });
-      console.log("KKK", node.value);
+      const signal = this.state.set(id, {});
+      // console.log("KKK", node.value);
 
       if (Array.isArray(node.value)) {
         const index = parseInt(key, 10);
         node.value[index] = signal;
-        console.log("KKK Assign to ", node.value, "at index", index, key, signal);
+        // console.log("KKK Assign to ", node.value, "at index", index, key, signal);
       } else {
         node.value[key] = signal;
       }
-      console.log("KKK", node.value);
+      // console.log("KKK", node.value);
     }
 
     return node.value[key];
@@ -116,21 +116,27 @@ export class TreeGenerator {
     this.logger.group(`write: "${path}"`);
     const segments = this.#parsePathSegments(path);
     const state = segments.reduce(this.reducer.bind(this), { node: this.#data, mode: "plain" });
-    state.node.value = data;
+
+    if(state.node.ext){
+    state.node.signal.value = data;
+    }else{
+      state.node.value = data;
+    }
+
     this.logger.groupEnd();
     return state.node;
   }
 
   reducer(state, segment, currentIndex, array) {
-    console.log("\n\nREDUCER-----------------------------------------");
-    // console.log(`mode:${state.mode}> cwd:/${array.slice(0, currentIndex).join("/")} #read: ${segment}`);
-    console.log(`mode:${state.mode}> cwd:/${array.map((o, i) => (i == currentIndex - 1 ? `[${o}]` : o)).join("/")} #read: ${segment}`);
+    // console.log("\n\nREDUCER-----------------------------------------");
+    // // console.log(`mode:${state.mode}> cwd:/${array.slice(0, currentIndex).join("/")} #read: ${segment}`);
+    // console.log(`mode:${state.mode}> cwd:/${array.map((o, i) => (i == currentIndex - 1 ? `[${o}]` : o)).join("/")} #read: ${segment}`);
 
     const currentState = this.#states[state.mode];
     const node = currentState.access(state.node, segment);
     const mode = currentState.nextState(segment);
 
-    console.log(`RETURN`, node, mode);
+    // console.log(`RETURN`, node, mode);
     return { node, mode };
   }
 

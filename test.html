@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
-    <title>State Kernel Demo - cede</title>
+    <title>cede: State Kernel Demo</title>
+    <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; }
+    html { color-scheme: light dark; line-height: 1.15; -webkit-text-size-adjust: 100%; -moz-tab-size: 4; tab-size: 4; padding: 3vh 5vw;}
+    </style>
   </head>
   <body>
     <h1 id="helloWorldElement">Hello, world!</h1>
@@ -14,14 +19,124 @@
     <input type="text" id="lastNameInput"></input>
 
     <h1 id="inputPreviewElement">Hello, world!</h1>
-    <script type="module">
+
+
+    <h1>Test Results</h1>
+     <pre id="output"></pre>
+
+     <script type="module">
+
+       import { test, describe, it, waitForCompletion } from './modules/cletus/cletus.js';
 
       import { Tree } from './Tree.js';
 
+       describe('Tree operations', () => {
+
+        const tree = new Tree('kernel-test', false);
+
+        // tree.load({
+        //   "my-app": {
+        //     "user": {
+        //       "profile.obj": {
+        //         "id": "d8460a47-fd71-499a-9c75-a379d8349378"
+        //       }
+        //     },
+        //     "workspace": {
+        //       "gradient.arr": {
+        //         "id": "fa0e44ff-454c-4317-bd09-884cfebdf989"
+        //       }
+        //     }
+        //   }
+        // });
+        // tree.dump();
+
+         it('should create profile.obj/password', () => {
+
+           const expected = 'hunter2';
+           const password = tree.mk('/my-app/user/profile.obj/password', expected );
+           const actual = password.value;
+           console.assert(actual == expected);
+
+         });
+
+
+
+         it('should create gradient.arr/0/color', () => {
+
+           const expected = '#ff0000';
+           const gradient = tree.mk('/my-app/workspace/gradient.arr/0/color', expected);
+           const actual = gradient.value;
+           console.assert(actual == expected);
+
+         });
+
+         it('should create gradient.arr/0/percent', () => {
+
+           const expected = 0;
+           const percent = tree.mk('/my-app/workspace/gradient.arr/0/percent', expected);
+           const actual = percent.value;
+           console.assert(actual == expected);
+
+         });
+
+         it('should return a serializable JSON', { todo: false }, () => {
+
+           console.log( tree.save() );
+           const result = tree.load();
+         //   // console.log('LOADED', result)
+         //   // tree()
+
+         });
+
+
+
+       });
+
+       // Wait for tests to complete and display results
+       const results = await waitForCompletion();
+       document.getElementById('output').textContent =
+         `Passed: ${results.summary.passed}\n` +
+         `Failed: ${results.summary.failed}\n` +
+         `Total: ${results.summary.total}`;
+     </script>
+
+
+
+
+
+
+    <script type="x-module">
+
+      import { Tree } from './Tree.js';
+      import { test, describe, it,  waitForCompletion} from './modules/cletus/cletus.js';
+
       import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from './Disposables.js';
 
+      describe('Browser tests', () => {
 
-      const tree = new Tree('kernel-test');
+        const tree = new Tree('kernel-test');
+
+         it('should have access to DOM', () => {
+           const div = document.createElement('div');
+           console.assert(div instanceof HTMLElement);
+         });
+
+         it('should create username signal', () => {
+           const expected = 'alice';
+           const username = tree.mk('/my-app/user/profile.obj/username', expected);
+           console.assert(username.value == expected);
+         });
+
+
+
+       });
+      // Wait for all tests to complete
+      const results = await waitForCompletion();
+      console.log('Tests complete:', results.summary);
+      console.log('Tests complete:', results );
+
+      // const tree = new Tree('kernel-test');
+      // tree.load();
 
       const  firstName = tree.mk('/my-app/user/profile.obj/firstName', 'Alice');
       firstName.subscribe(console.log);
@@ -61,10 +176,11 @@
       // const disposable4 = new DisposableSingleDirectionBinder(state.get('jello'), inputPreviewElement);
 
 
-      const disposableFirstName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/firstName'), firstNameInput);
-      const disposableLastName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/lastName'), lastNameInput);
+      // const disposableFirstName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/firstName'), firstNameInput);
+      // const disposableLastName = new DisposableBidirectionalBinder(tree.read('/my-app/user/profile.obj/lastName'), lastNameInput);
 
       tree.dump();
+      // tree.save();
 
       // console.log('@@@ 0', tree.read('/my-app/colorStops.arr/0'))
 

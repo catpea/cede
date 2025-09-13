@@ -1,0 +1,26 @@
+{
+  "name": "cletus",
+  "description": "Portable test runner for browser and server!",
+  "version": "1.0.3",
+  "type": "module",
+  "main": "cletus.js",
+  "scripts": {
+    "save": "git add .; git commit -m 'Updated Release'; npm version patch; npm publish; git push --follow-tags;"
+  },
+  "keywords": [
+    "test",
+    "suite",
+    "describe",
+    "it"
+  ],
+  "author": "@catpea",
+  "license": "GPL",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/catpea/cede.git"
+  },
+  "bugs": {
+    "url": "https://github.com/catpea/cede/issues"
+  },
+  "homepage": "https://github.com/catpea/cede#readme"
+}
