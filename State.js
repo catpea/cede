@@ -37,28 +37,33 @@ export class State {
   // }
 
 
+  get size(){
+    return this.#signals.size;
+  }
 
   clear(){
-
     for (const signal of this.#signals.values() ){
       signal.dispose();
     }
     this.#signals.clear();
-
   }
 
-  set(name, value=null) {
+  set(name, value=null, options) {
+
     let signal;
     if(this.#signals.has(name)){
      signal = this.#signals.get(name);
     }else{
-      const options = {
+
+      const defaults = {
         name,
         domain: this.#domain,
         persistence: true,
         synchronization: true,
       };
-     signal = new Signal(value, options);
+      // console.log('1>>>', value, Object.assign({}, defaults,options))
+     signal = new Signal(value, Object.assign({}, defaults,options));
+
      this.#signals.set(name, signal);
     }
     signal.value = value;

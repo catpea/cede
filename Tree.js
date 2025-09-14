@@ -7,31 +7,37 @@ import { TreeGenerator } from "./TreeGenerator.js";
 
 export class Tree {
   #domain;
-  #state;
+  state;
   #data = {};
 
   constructor(domain, debug = false) {
     this.#domain = domain;
-    this.#state = new State(domain);
-    this.treeGenerator = new TreeGenerator(this.#data, this.#state, { debug });
+    this.state = new State(domain);
+    this.treeGenerator = new TreeGenerator(this.#data, this.state, { debug });
     this.treeNavigator = new TreeNavigator(this.#data, { debug });
   }
 
   clear(){
-    this.#state.clear();
+    this.state.clear();
     this.data = {};
   }
 
-  mk(path, data = null) {
-    return this.treeGenerator.write(path, data.key?this.signalize(data):data);
-  }
+  // Commands //
 
   read(path) {
     return this.treeNavigator.read(path);
   }
 
-  write(path, value) {
+  create(path, data = null) {
+    const signalified = this.signalify(data);
+    return this.treeGenerator.write(path, signalified );
+  }
 
+  restore(path, data = null) {
+    return this.treeGenerator.write(path, this.signalize(data) );
+  }
+
+  write(path, value) {
     const node = this.treeNavigator.read(path);
     if (!node) throw new Error(`Path not found. Create the path with mk prior to use. (${path})`);
 
@@ -43,24 +49,69 @@ export class Tree {
     return node.signal;
   }
 
+  // Utilities //
+
   ext(path) {
     return path.match(/[.]([\w\d]+)$/)?.[1] || "";
   }
 
-  signalize(key, data){
+  dump() {
+    console.log(this.#data);
+  }
 
+  isFile(node){
+    return (node && node.ext && node.signal && typeof node.signal.toJSON === 'function')
+  }
+
+  hasExtension(key) {
+    return key.endsWith(".arr") || key.endsWith(".obj");
+  }
+
+  isPrimitive(value) {
+      return (
+          value === null || // Check for null
+          typeof value !== 'object' && typeof value !== 'function' // Check for non-object and non-function types
+      );
+  }
+
+  uuid() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
+      return crypto.randomUUID();
+    } else {
+      return Math.random().toString(36).substr(2);
+    }
+  }
+
+  // Serialization Toolkit //
+
+  // convert POJO to signal tree
+        // options.persistence = false;
+        // options.synchronization = false;
+
+   signalify(input){
+    const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
+    walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
+
+      // console.info('RRR', key, node, parent, path, isLeaf, isRoot)
+      const options = {};
+      // if(!isLeaf) options.structural = true;
+      return this.state.set(this.uuid(), node, options);
+    };
+    const response = walker.walk(input);
+    // console.log('RRR', input);
+    // console.log('RRR', response);
+    return response;
+  }
+
+  // convert key:val to signals
+  signalize(key, data){
     if( key === null || key === undefined ) throw new Error(` Key must not be undefined. Received "${key}"`);
     if( !data ) throw new Error(`Data is required. Received "${data}"`);
-
-
     let signalValue;
-
     for ( const [propertyName, propertyValue] of Object.entries(data) ){
-
       if(this.isPrimitive(propertyValue)){
         signalValue = propertyValue;
       } else if(Array.isArray(propertyValue)){
-        // {key:signalKey, val:signalValue}
         signalValue = [];
         for( const element of propertyValue){
           signalValue.push(signalize(element.key, element.val))
@@ -70,10 +121,8 @@ export class Tree {
         for( const property of propertyValue){
           signalValue[property] = signalize(property.key, property.val);
         }
-
       }
     }
-
     const [ name, domain ] = key.split(/--/);
     const signal = new Signal(signalValue, {name, domain, persistence: true, synchronization: true});
     return signal;
@@ -82,39 +131,17 @@ export class Tree {
   designalize() {
     const walker = new TreeWalker();
     walker.visitor = (key, node, parent, path) => {
-      if(this.isFile(node)) return this.objectify( node.signal );
-      // if(this.isFile(node)) return JSON.stringify( node.signal ,null, 2);
-
-      // if (key === 'signal' && node && typeof node.toJSON === 'function') return JSON.stringify(node,null,2);
-
+      if(this.isFile(node)) return  node.signal.toJSON();
     };
     return walker.walk( this.#data );
-  }
-
-  objectify( signal ){
-
-    return  signal.toJSON() ;
-
-    console.log('objectify', signal)
-    const walker = new TreeWalker();
-    walker.visitor = (key, node, parent, path) => {
-      console.log('>>>', key, node)
-
-      if (node.toJSON) return node.toJSON();
-    };
-    return walker.walk(  signal.toJSON() );
   }
 
   flatten() {
     const flattened = [];
     const walker = new TreeWalker();
     walker.visitor = (key, node, parent, path) => {
-
-      if(this.hasExtension(key)) flattened.push(['mk', path.join('/'), node])
-      // if(this.isPrimitive(node)) flattened.push(['mk', path.join('/'), node])
-
+      if(this.hasExtension(key)) flattened.push(['restore', path.join('/'), node])
     };
-
     walker.walk( this.designalize() );
     return flattened;
   }
@@ -126,6 +153,7 @@ export class Tree {
     };
     return walker.walk( this.#data );
   }
+
   stringify() {
     return JSON.stringify(this, null, 2);
   }
@@ -138,25 +166,21 @@ export class Tree {
 
   hydrated() {
     const dehydrated = localStorage.getItem(this.#domain);
-    console.log('dehydrated:', dehydrated);
+    // console.log('dehydrated:', dehydrated);
     if (dehydrated !== null) return JSON.parse(dehydrated);
   }
 
   load(data) {
     if (!data) data = this.hydrated();
-
     const walker = new TreeWalker();
     walker.visitor = (key, node, parent, path) => {
-
       if (node && typeof node === "object" && "id" in node) {
-        // Return replacement - this replaces the ENTIRE node
         return {
           id: node.id,
-          // replacedAt: new Date().toISOString(),
-          // originalPath: path.join("/"),
+          replacedAt: new Date().toISOString(),
+          originalPath: path.join("/"),
           ext: this.ext(key),
-          // TODO use __signal based on dat in )))signal create a nested signal object
-          signal: this.#state.get(node.id),
+          signal: this.state.get(node.id),
         };
       }
       return undefined;
@@ -164,26 +188,4 @@ export class Tree {
     this.#data = walker.walk(data);
   }
 
-  dump() {
-    console.log(this.#data);
-  }
-  isFile(node){
-    return (node && node.ext && node.signal && typeof node.signal.toJSON === 'function')
-  }
-  hasExtension(key) {
-    return key.endsWith(".arr") || key.endsWith(".obj");
-  }
-  isPrimitive(value) {
-      return (
-          value === null || // Check for null
-          typeof value !== 'object' && typeof value !== 'function' // Check for non-object and non-function types
-      );
-  }
-  #uuid() {
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
-      return crypto.randomUUID();
-    } else {
-      return Math.random().toString(36).substr(2);
-    }
-  }
 }

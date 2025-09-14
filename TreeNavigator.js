@@ -7,7 +7,6 @@ class NavigatorState {
   }
 
   hasExtension(key) {
-    this.logger.log('YYY hasExtension', key, (key.endsWith(".arr") || key.endsWith(".obj")))
     return key.endsWith(".arr") || key.endsWith(".obj");
   }
 }
@@ -17,8 +16,8 @@ class PlainState extends NavigatorState {
   access(node, key) {
     return node[key];
   }
-  nextState(key) {
-    return this.hasExtension(key) ? "ext" : "plain";
+  nextState(currentKey, nextKey) {
+    return this.hasExtension(currentKey) ? "ext" : "plain";
   }
 }
 
@@ -26,7 +25,8 @@ class ExtState extends NavigatorState {
   name = "ext";
   access(node, extensionSignalKey) {
     const extensionSignal = node.signal;
-    const response = extensionSignal.value[extensionSignalKey];
+    const actualSignal = extensionSignal.value;
+    const response = actualSignal.value[extensionSignalKey];
 
     this.logger.log('YYY DAT', node, extensionSignalKey);
     this.logger.log('YYY RET', response);
@@ -57,7 +57,7 @@ export class TreeNavigator {
   // -- //
 
   constructor(data, options = {}) {
-    this.debug = options.debug || false;
+    this.debug = true; //options.debug || false;
     this.logger = new Logger(this.debug);
     this.#states = Object.fromEntries([PlainState, ExtState, SignalState].map((Class) => new Class(this.logger)).map((c) => [c.name, c]));
     this.#data = data;
@@ -67,20 +67,17 @@ export class TreeNavigator {
     this.logger.group(`read: "${path}"`);
     const segments = this.#parsePathSegments(path);
     const state = segments.reduce(this.reducer.bind(this), { node: this.#data, mode: "plain" });
+
     this.logger.groupEnd();
     return state.node;
   }
 
   reducer(state, segment, currentIndex, array) {
-    console.log('\n\nREDUCER-----------------------------------------')
-    // console.log(`mode:${state.mode}> cwd:/${array.slice(0, currentIndex).join("/")} #read: ${segment}`);
-    console.log(`mode:${state.mode}> cwd:/${array.map((o,i)=>i==currentIndex-1?`[${o}]`:o).join("/")} #read: ${segment}`);
+    this.logger.log(`Reading segment ${segment} (${currentIndex}) using currentState=${state.mode} reader`);
 
-    // if (this.#isLastSegment(array, currentIndex)) return state; //Reached the end of the path
-    this.logger.log(segment, array[currentIndex])
     const currentState = this.#states[state.mode];
     const node = currentState.access(state.node, segment);
-    const mode = currentState.nextState(array[currentIndex]);
+    const mode = currentState.nextState(array[currentIndex], array[currentIndex+1]);
     this.logger.log({ node, mode });
 
     return { node, mode };

@@ -11,21 +11,79 @@
     </style>
   </head>
   <body>
+
     <h1 id="helloWorldElement">Hello, world!</h1>
-    <input type="text" id="helloWorldInput" />
-    <input type="text" id="firstNameInput" />
-    <input type="text" id="lastNameInput" />
+
+
+    <style>
+    /* lightweight, no external libs */
+    .login {
+      max-width: 260px;
+      margin: 2rem auto;
+      display: grid;
+      gap: 0.5rem;
+      font-family: system-ui, sans-serif;
+    }
+
+    .login label {
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    .login input {
+      padding: 0.4rem 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    .login button {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #0066ff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .login button:hover { background: #0055dd; }
+
+    </style>
+    <form class="login">
+      <label for="usernameInput">username</label>
+      <input type="text" id="usernameInput" autocomplete="username">
+
+      <label for="passwordInput">password</label>
+      <input type="text" id="passwordInput" autocomplete="current-password">
+
+      <button type="submit">Log in</button>
+    </form>
+
+
     <h1 id="inputPreviewElement">Hello, world!</h1>
     <h1>Test Results</h1>
     <pre id="output"></pre>
 
     <script type="module">
+
+
+
+
+
+    ////////////////
+
+      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from './Disposables.js';
+
       import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
 
+      import { Signal } from "./Signal.js";
       import { Tree } from "./Tree.js";
 
+      localStorage.clear();
+      const tree = new Tree("kernel-test", false);
+
       describe("Tree operations", () => {
-        const tree = new Tree("kernel-test", false);
+
 
         // tree.load({
         //   "my-app": {
@@ -43,14 +101,29 @@
         // });
         // tree.dump();
 
-        // it("should create profile.obj", () => {
-          const expected = { password:"hunter2" };
-          const password = tree.mk("/my-app/user/profile.obj", expected);
-          const actual = password.signal.value;
+        it("should create profile.obj", () => {
 
-          console.assert(actual == expected);
-          console.log(actual, expected)
-        // });
+          const expected = { password:"hunter2" };
+          tree.create("/my-app/user/profile.obj", { username:'zerocool', password:"hunter2" } );
+
+          const profile = tree.read('/my-app/user/profile.obj');
+          console.assert(profile.ext == 'obj', 'Does not have .obj extension');
+          console.assert(profile.signal.value instanceof Signal, 'Is not of correct class');
+
+
+          const username = tree.read('/my-app/user/profile.obj/username');
+          console.assert(username !== undefined, 'Unable to retrieve data from tree, possibly due to new root logic where signal is an actual signal object...')
+          console.log(username)
+          // const password = tree.read('/my-app/user/profile.obj/password');
+
+          // const disposableUsername = new DisposableBidirectionalBinder(username, usernameInput);
+          // const disposablePassword = new DisposableBidirectionalBinder(password, passwordInput);
+
+
+          // console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value );
+          // // console.assert(tree.state.size == 1, 'Tree state must contain only one item.');
+
+        });
 
         // it("should create profile.obj/password", () => {
         //   const expected = "hunter2";
@@ -73,20 +146,21 @@
         //   console.assert(actual == expected);
         // });
 
-        it("should return a serializable JSON", { todo: false }, () => {
-          // console.log( tree.save() );
-          // const result = tree.load();
-          console.log("FLATTENED");
-          const flat = tree.flatten();
-          console.table(flat);
-          // console.log(JSON.stringify(flat, 0, 2));
-          // flat.forEach(o=>tree.mk(o))
-        });
+        // it("should return a serializable JSON", { todo: false }, () => {
+        //   // console.log( tree.save() );
+        //   // const result = tree.load();
+        //   // console.log("FLATTENED");
+        //   // const flat = tree.flatten();
+        //   // console.table(flat);
+        //   // console.log(JSON.stringify(flat, 0, 2));
+        //   // flat.forEach(o=>tree.mk(o))
+        // });
       });
 
       // Wait for tests to complete and display results
       const results = await waitForCompletion();
       document.getElementById("output").textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n` + `Total: ${results.summary.total}`;
+      tree.dump()
     </script>
   </body>
 </html>

@@ -35,7 +35,13 @@ class PlainState extends GeneratorState {
         const id = this.uuid();
         const ext = this.ext(key);
 
-        const signal = this.state.set(id, ext == "arr" ? [] : {});
+        const options = {
+          // persistence:false,
+          // synchronization:false
+          structural: true,
+        };
+        const signal = this.state.set(id, ext == "arr" ? [] : {}, options);
+
         node[key].id = id;
         node[key].ext = ext;
         node[key].signal = signal;
@@ -56,9 +62,17 @@ class ExtState extends GeneratorState {
     const extensionSignal = node.signal;
 
     if (!extensionSignal.value[extensionSignalKey]) {
+
       const id = this.uuid();
       const ext = this.ext(extensionSignalKey);
-      const signal = this.state.set(id, ext == "arr" ? [] : {});
+
+              const options = {
+          // persistence:false,
+          // synchronization:false
+          structural: true,
+        };
+      const signal = this.state.set(id, ext == "arr" ? [] : {}, options );
+
       extensionSignal.value[extensionSignalKey] = signal;
     }
 
@@ -77,7 +91,15 @@ class SignalState extends GeneratorState {
 
     if (!node.value[key]) {
       const id = this.uuid();
-      const signal = this.state.set(id, {});
+
+
+        const options = {
+          // persistence:false,
+          // synchronization:false
+          structural: true,
+        };
+
+      const signal = this.state.set(id, {}, options);
       // console.log("KKK", node.value);
 
       if (Array.isArray(node.value)) {

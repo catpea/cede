@@ -1,6 +1,4 @@
-// ===============
-// Signal.js
-// ===============
+import { TreeWalker } from "./TreeWalker.js";
 
 export class Signal {
   #rev = 0;
@@ -17,6 +15,7 @@ export class Signal {
   #readSubscribers;
 
   #disposables;
+  #structural;
 
   #useScheduling;
   #usePersistence;
@@ -29,6 +28,7 @@ export class Signal {
       domain: "signal",
       name: "unnamed",
 
+      structural: false, // serialize structural information only
       conflicting: 16,
 
       persistence: false,
@@ -44,6 +44,7 @@ export class Signal {
     this.#name = options.name;
 
     this.#conflicting = options.conflicting; // how many conflicting revisions are kept on file
+    this.#structural = options.structural; // WARNING: when true signal will not serizlize values, just keys
 
     this.#useScheduling = options.scheduling; // scheduling support
     this.#usePersistence = options.persistence; // persistence support
@@ -69,7 +70,7 @@ export class Signal {
 
     if (currentValue === null) {
 
-      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }));
+      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify( this ));
 
     } else {
       this.sync(JSON.parse(currentValue));
@@ -149,7 +150,8 @@ export class Signal {
     }
 
     if (this.#usePersistence) {
-      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }));
+      // localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }));
+      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify( this ));
     }
 
     this.notify();
@@ -252,11 +254,28 @@ export class Signal {
   }
 
   toJSON(){
-    return { key: `${this.#domain}--${this.#name}`, val: this.serialize(this.#value) };
+      const key = `${this.#domain}--${this.#name}`;
+      const val =  this.serialize(this.#value);
+      const ptr = this.#structural && this.#isPrimitive()
+      return {
+        key,
+        val,
+
+        toJSON:1,
+        ptr,
+        p: this.#isPrimitive(),
+
+      };
   }
 
-  isSignal(obj) {
+  #isSignal(obj = this.#value) {
     return obj && typeof obj.toJSON === 'function';
+  }
+  #isPrimitive(value = this.#value) {
+      return (
+          value === null || // Check for null
+          typeof value !== 'object' && typeof value !== 'function' // Check for non-object and non-function types
+      );
   }
 
   [Symbol.toPrimitive](hint) {
@@ -278,58 +297,30 @@ export class Signal {
     }
   }
 
-  serialize(value = this.#value, seen = new WeakMap()) {
-    // primitives
-    if (value === null || typeof value !== 'object') return value;
 
-    // handle circular refs
-    if (seen.has(value)) return seen.get(value);
+  serialize( input = this ) {
+    const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
+    walker.visitor = (key, node, parent, path, isLeaf) => {
 
-    // If it's a Signal, call toJSON and then continue serializing the result
-    if (this.isSignal(value)) {
-      const serialized = value.toJSON();
-      return this.serialize(serialized, seen);
-    }
+      if(this.#isSignal(node)){
+        return node.toJSON();
+      }else{
+        if(this.#isPrimitive(node)){
+          return node;
+        }else{
 
-    // Arrays
-    if (Array.isArray(value)) {
-      const arr = [];
-      seen.set(value, arr); // ✓ This is correct - set before recursing
-      for (let i = 0; i < value.length; i++) {
-        arr[i] = this.serialize(value[i], seen);
+          return {
+            key: this.name,
+            val: this.#structural?'___':this.#value,
+          };
+          const msg = `Signal ${this.id} serializer encountered a non primitive, non signal node, at ${path.join('/')||'/'} those are not permitted`;
+          console.error(msg, node);
+          throw new Error(msg);
+        }
       }
-      return arr;
-    }
 
-    // Add Date handling
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
+    };
+    return walker.walk( input );
 
-    // Map - correct as is
-    if (value instanceof Map) {
-      const m = new Map();
-      seen.set(value, m);
-      for (const [k, v] of value.entries()) {
-        m.set(this.serialize(k, seen), this.serialize(v, seen));
-      }
-      return m;
-    }
-
-    // Set - correct as is
-    if (value instanceof Set) {
-      const s = new Set();
-      seen.set(value, s);
-      for (const v of value.values()) s.add(this.serialize(v, seen));
-      return s;
-    }
-
-    // Plain object - correct as is
-    const out = {};
-    seen.set(value, out);
-    for (const key of Object.keys(value)) {
-      out[key] = this.serialize(value[key], seen);
-    }
-    return out;
   }
 }
