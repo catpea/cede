@@ -16,6 +16,7 @@ export class Signal {
 
   #disposables;
   #structural;
+  #storageSeparator;
 
   #useScheduling;
   #usePersistence;
@@ -24,12 +25,15 @@ export class Signal {
   #conflicting;
 
   constructor(value, config) {
+
     const defaults = {
+
       domain: "signal",
       name: "unnamed",
 
       structural: false, // serialize structural information only
       conflicting: 16,
+      storageSeparator: '--',
 
       persistence: false,
       scheduling: false,
@@ -45,6 +49,7 @@ export class Signal {
 
     this.#conflicting = options.conflicting; // how many conflicting revisions are kept on file
     this.#structural = options.structural; // WARNING: when true signal will not serizlize values, just keys
+    this.#storageSeparator = options.storageSeparator;
 
     this.#useScheduling = options.scheduling; // scheduling support
     this.#usePersistence = options.persistence; // persistence support
@@ -59,6 +64,9 @@ export class Signal {
 
     if (this.#usePersistence) this.initializePersistence();
     if (this.#useSynchronization) this.addDisposable(this.synchronize());
+    // WARNING: ORDER MATTERS: this must come after this.addDisposable(this.synchronize());
+    if (this.#usePersistence) this.addDisposable( ()=> localStorage.removeItem(this.#domain + this.#storageSeparator + this.#name) )
+
   }
 
   // Persistence Layer
@@ -66,11 +74,11 @@ export class Signal {
   initializePersistence() {
 
 
-    const currentValue = localStorage.getItem(this.#domain + "-" + this.#name);
+    const currentValue = localStorage.getItem(this.#domain + this.#storageSeparator + this.#name);
 
     if (currentValue === null) {
 
-      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify( this ));
+      localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify( this ));
 
     } else {
       this.sync(JSON.parse(currentValue));
@@ -80,7 +88,7 @@ export class Signal {
 
   synchronize() {
     const watcher = (event) => {
-      if (event.key === this.#domain + "-" + this.#name) {
+      if (event.key === this.#domain + this.#storageSeparator + this.#name) {
         this.sync(JSON.parse(event.newValue));
       }
     };
@@ -150,14 +158,16 @@ export class Signal {
     }
 
     if (this.#usePersistence) {
-      // localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify({ rev: this.#rev, revId: this.#revId, value: this.#value }));
-      localStorage.setItem(this.#domain + "-" + this.#name, JSON.stringify( this ));
+
+      localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify( this ));
+
     }
 
     this.notify();
   }
 
   // Detect Writes
+
   // NOTE: Subscribers stored in Sets persist until unsubscribed/disposing;
   subscribe(subscriber, autorun = true) {
     if (typeof subscriber !== "function") throw new Error("Subscriber must be a function");
@@ -253,20 +263,6 @@ export class Signal {
     return child;
   }
 
-  toJSON(){
-      const key = `${this.#domain}--${this.#name}`;
-      const val =  this.serialize(this.#value);
-      const ptr = this.#structural && this.#isPrimitive()
-      return {
-        key,
-        val,
-
-        toJSON:1,
-        ptr,
-        p: this.#isPrimitive(),
-
-      };
-  }
 
   #isSignal(obj = this.#value) {
     return obj && typeof obj.toJSON === 'function';
@@ -298,6 +294,13 @@ export class Signal {
   }
 
 
+  toJSON(){
+      const key = `${this.#domain}${this.#storageSeparator}${this.#name}`;
+      const val =  this.serialize(this.#value);
+      // const type = this.#isPrimitive()?'primitive':'???';
+      return { key, val, };
+  }
+
   serialize( input = this ) {
     const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
     walker.visitor = (key, node, parent, path, isLeaf) => {
@@ -308,14 +311,15 @@ export class Signal {
         if(this.#isPrimitive(node)){
           return node;
         }else{
+          const key = `${this.#domain}${this.#storageSeparator}${this.#name}`;
+          const type = this.#structural?'structural':'primitive'
 
-          return {
-            key: this.name,
-            val: this.#structural?'___':this.#value,
-          };
-          const msg = `Signal ${this.id} serializer encountered a non primitive, non signal node, at ${path.join('/')||'/'} those are not permitted`;
-          console.error(msg, node);
-          throw new Error(msg);
+          if(this.#structural){
+            return { type, key };
+          }else{
+            const val = this.#value;
+            return { type, key, val };
+          }
         }
       }
 

@@ -38,14 +38,20 @@
     <style>
       /* lightweight, no external libs */
       .login {
-        max-width: 260px;
+        max-width: min(300px, 100vw);
         margin: 2rem auto;
         display: grid;
         gap: 0.5rem;
         font-family: system-ui, sans-serif;
+
+        background: #2c2b32;
+
+        padding: 2rem;
+        box-shadow: rgb(0,0,0,0.2) 2px 2px 8px 6px;
+        border-radius: 8px;
       }
 
-      .login label {
+      .login label, .login > small {
         font-size: 0.9rem;
         color: #555;
       }
@@ -58,7 +64,7 @@
       }
 
       .login button {
-        margin-top: 0.5rem;
+        margin-top: 1.5rem;
         padding: 0.5rem;
         background: #0066ff;
         color: #fff;
@@ -69,10 +75,12 @@
       .login button:hover {
         background: #0055dd;
       }
+      *[disabled]{
+        opacity: .15;
+      }
     </style>
 
     <form class="login">
-      <small>user interface simulation</small>
 
       <label for="usernameInput">username</label>
       <input type="text" id="usernameInput" autocomplete="username" />
@@ -80,7 +88,8 @@
       <label for="passwordInput">password</label>
       <input type="text" id="passwordInput" autocomplete="current-password" />
 
-      <button type="submit">Log in</button>
+      <button id="loginButton" type="submit">Log in</button>
+      <small>user interface simulation</small>
     </form>
 
     <h5>Substrate Test Results</h5>
@@ -95,6 +104,22 @@
 
       import { Signal } from "./Signal.js";
       import { Tree } from "./Tree.js";
+
+      class DisposableManager {
+        #disposables = new Set();
+
+        dispose() {
+          this.#disposables.forEach((disposable) => disposable());
+          this.#disposables.clear();
+        }
+
+        addDisposable(...disposables) {
+          disposables.flat(Infinity).forEach(d => this.#disposables.add(d));
+        }
+
+      }
+      const disposableManager = new DisposableManager();
+
 
       localStorage.clear();
       const tree = new Tree("kernel-test", false);
@@ -131,14 +156,23 @@
 
           console.assert(username !== undefined, "Unable to retrieve data from tree, possibly due to new root logic where signal is an actual signal object...");
           console.log(username);
-          // const password = tree.read('/my-app/user/profile.obj/password');
 
           const disposableUsername = new DisposableBidirectionalBinder(username, usernameInput);
-          // const disposablePassword = new DisposableBidirectionalBinder(password, passwordInput);
 
-          // console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value );
-          // // console.assert(tree.state.size == 1, 'Tree state must contain only one item.');
+          const password = tree.read('/my-app/user/profile.obj/password');
+          const disposablePassword = new DisposableBidirectionalBinder(password, passwordInput);
+          console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value );
+
+          ///
+
+          disposableManager.addDisposable( ()=>disposableUsername.dispose(), ()=>usernameInput.value = '', ()=>usernameInput.setAttribute('disabled', 'disabled') );
+          disposableManager.addDisposable( ()=>disposablePassword.dispose(), ()=>passwordInput.value = '', ()=>passwordInput.setAttribute('disabled', 'disabled') );
+          disposableManager.addDisposable( ()=>loginButton.setAttribute('disabled', 'disabled') );
+
         });
+
+
+
 
         // it("should create profile.obj/password", () => {
         //   const expected = "hunter2";
@@ -170,6 +204,21 @@
         //   // console.log(JSON.stringify(flat, 0, 2));
         //   // flat.forEach(o=>tree.mk(o))
         // });
+
+        it("save, clear, and load", {todo:true}, () => {
+
+          const data = JSON.stringify(tree, null, 2);
+          tree.save();
+
+          setTimeout(()=>{
+            tree.clear();
+            disposableManager.dispose();
+          }, 30_000);
+
+          // tree.load(data);
+
+        });
+
       });
 
       // Wait for tests to complete and display results

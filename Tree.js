@@ -10,14 +10,30 @@ export class Tree {
   state;
   #data = {};
 
+  #disposables;
+
   constructor(domain, debug = false) {
     this.#domain = domain;
     this.state = new State(domain);
     this.treeGenerator = new TreeGenerator(this.#data, this.state, { debug });
     this.treeNavigator = new TreeNavigator(this.#data, { debug });
+
+    this.#disposables = new Set();
+
+  }
+
+
+  dispose() {
+    this.#disposables.forEach((disposable) => disposable());
+    this.#disposables.clear();
+  }
+
+  addDisposable(...disposables) {
+    disposables.flat(Infinity).forEach(d => this.#disposables.add(d));
   }
 
   clear(){
+    localStorage.removeItem(this.#domain);
     this.state.clear();
     this.data = {};
   }

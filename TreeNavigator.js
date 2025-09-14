@@ -57,7 +57,7 @@ export class TreeNavigator {
   // -- //
 
   constructor(data, options = {}) {
-    this.debug = true; //options.debug || false;
+    this.debug = options.debug || false;
     this.logger = new Logger(this.debug);
     this.#states = Object.fromEntries([PlainState, ExtState, SignalState].map((Class) => new Class(this.logger)).map((c) => [c.name, c]));
     this.#data = data;
@@ -67,14 +67,12 @@ export class TreeNavigator {
     this.logger.group(`read: "${path}"`);
     const segments = this.#parsePathSegments(path);
     const state = segments.reduce(this.reducer.bind(this), { node: this.#data, mode: "plain" });
-
     this.logger.groupEnd();
     return state.node;
   }
 
   reducer(state, segment, currentIndex, array) {
     this.logger.log(`Reading segment ${segment} (${currentIndex}) using currentState=${state.mode} reader`);
-
     const currentState = this.#states[state.mode];
     const node = currentState.access(state.node, segment);
     const mode = currentState.nextState(array[currentIndex], array[currentIndex+1]);
