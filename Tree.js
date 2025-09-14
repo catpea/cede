@@ -94,7 +94,7 @@ export class Tree {
 
       // console.info('RRR', key, node, parent, path, isLeaf, isRoot)
       const options = {};
-      // if(!isLeaf) options.structural = true;
+      if(!isLeaf) options.structural = true;
       return this.state.set(this.uuid(), node, options);
     };
     const response = walker.walk(input);

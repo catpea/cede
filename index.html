@@ -1,38 +1,182 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
-    <title>State Kernel Demo - cede</title>
+    <title>cede: State Kernel Demo</title>
     <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    * { margin: 0; }
-    html { color-scheme: light dark; line-height: 1.15; -webkit-text-size-adjust: 100%; -moz-tab-size: 4; tab-size: 4; }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      * {
+        margin: 0;
+      }
+      html {
+        color-scheme: light dark;
+        line-height: 1.15;
+        -webkit-text-size-adjust: 100%;
+        -moz-tab-size: 4;
+        tab-size: 4;
+      }
+      body {
+        padding: 3vh 5vw;
+        margin: 0;
+        line-height: 1.2;
+        -webkit-font-smoothing: antialiased;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto,
+                     Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+                     'Segoe UI Emoji', 'Segoe UI Symbol';
+      }
+
     </style>
   </head>
   <body>
-    <h1 id="helloWorldElement">Hello, world!</h1>
-    <input type="text" id="helloWorldInput"></input>
-    <h1 id="inputPreviewElement">Hello, world!</h1>
+
+    <style>
+      /* lightweight, no external libs */
+      .login {
+        max-width: 260px;
+        margin: 2rem auto;
+        display: grid;
+        gap: 0.5rem;
+        font-family: system-ui, sans-serif;
+      }
+
+      .login label {
+        font-size: 0.9rem;
+        color: #555;
+      }
+
+      .login input {
+        padding: 0.4rem 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      .login button {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #0066ff;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .login button:hover {
+        background: #0055dd;
+      }
+    </style>
+
+    <form class="login">
+      <small>user interface simulation</small>
+
+      <label for="usernameInput">username</label>
+      <input type="text" id="usernameInput" autocomplete="username" />
+
+      <label for="passwordInput">password</label>
+      <input type="text" id="passwordInput" autocomplete="current-password" />
+
+      <button type="submit">Log in</button>
+    </form>
+
+    <h5>Substrate Test Results</h5>
+    <pre id="output"></pre>
+
     <script type="module">
+      ////////////////
 
-      import { State } from './State.js';
-      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from './Disposables.js';
+      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from "./Disposables.js";
 
-      const state = new State('kernel-test');
+      import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
 
-      state.newValue('hello', 'Meow Meow!');
-      state.newValue('jello', 'Squelch Jiggle!');
+      import { Signal } from "./Signal.js";
+      import { Tree } from "./Tree.js";
 
-      const disposable1 = new DisposableSignalListener(state.get('hello'), console.log)
-      const disposable2 = new DisposableSingleDirectionBinder(state.get('hello'), helloWorldElement);
-      const disposable3 = new DisposableBidirectionalBinder(state.get('jello'), helloWorldInput);
-      const disposable4 = new DisposableSingleDirectionBinder(state.get('jello'), inputPreviewElement);
+      localStorage.clear();
+      const tree = new Tree("kernel-test", false);
 
-      ///
+      describe("Tree operations", () => {
+        // tree.load({
+        //   "my-app": {
+        //     "user": {
+        //       "profile.obj": {
+        //         "id": "d8460a47-fd71-499a-9c75-a379d8349378"
+        //       }
+        //     },
+        //     "workspace": {
+        //       "gradient.arr": {
+        //         "id": "fa0e44ff-454c-4317-bd09-884cfebdf989"
+        //       }
+        //     }
+        //   }
+        // });
+        // tree.dump();
 
+        it("should create profile.obj", () => {
+          const expected = { password: "hunter2" };
+          tree.create("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
 
+          const profile = tree.read("/my-app/user/profile.obj");
+          console.assert(profile.ext == "obj", "Does not have .obj extension");
+          console.assert(profile.signal instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
+          console.assert(profile.signal.value instanceof Signal, "The value of the .signal must also be a signal");
+
+          const username = tree.read("/my-app/user/profile.obj/username");
+          console.assert(username instanceof Signal, "profile.obj/username must be a signal");
+          console.assert(typeof username.value === 'string', "profile.obj/username.value must be a simple primitive string.");
+
+          console.assert(username !== undefined, "Unable to retrieve data from tree, possibly due to new root logic where signal is an actual signal object...");
+          console.log(username);
+          // const password = tree.read('/my-app/user/profile.obj/password');
+
+          const disposableUsername = new DisposableBidirectionalBinder(username, usernameInput);
+          // const disposablePassword = new DisposableBidirectionalBinder(password, passwordInput);
+
+          // console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value );
+          // // console.assert(tree.state.size == 1, 'Tree state must contain only one item.');
+        });
+
+        // it("should create profile.obj/password", () => {
+        //   const expected = "hunter2";
+        //   const password = tree.mk("/my-app/user/profile.obj/password", expected);
+        //   const actual = password.value;
+        //   console.assert(actual == expected);
+        // });
+
+        // it("should create gradient.arr/0/color", () => {
+        //   const expected = "#ff0000";
+        //   const gradient = tree.mk("/my-app/workspace/gradient.arr/0/color", expected);
+        //   const actual = gradient.value;
+        //   console.assert(actual == expected);
+        // });
+
+        // it("should create gradient.arr/0/percent", () => {
+        //   const expected = 0;
+        //   const percent = tree.mk("/my-app/workspace/gradient.arr/0/percent", expected);
+        //   const actual = percent.value;
+        //   console.assert(actual == expected);
+        // });
+
+        // it("should return a serializable JSON", { todo: false }, () => {
+        //   // console.log( tree.save() );
+        //   // const result = tree.load();
+        //   // console.log("FLATTENED");
+        //   // const flat = tree.flatten();
+        //   // console.table(flat);
+        //   // console.log(JSON.stringify(flat, 0, 2));
+        //   // flat.forEach(o=>tree.mk(o))
+        // });
+      });
+
+      // Wait for tests to complete and display results
+      const results = await waitForCompletion();
+      document.getElementById("output").textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n`;
+      console.log(results);
+      tree.dump();
     </script>
   </body>
 </html>
