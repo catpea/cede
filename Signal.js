@@ -148,7 +148,7 @@ export class Signal {
 
     this.#value = newValue;
 
-    console.log("Previous revision", this.#rev, { bump });
+    // console.log("Previous revision", this.#rev, { bump });
     if (bump) {
       if (rev !== undefined && rev !== null) {
         this.#rev = rev;
@@ -158,7 +158,7 @@ export class Signal {
 
       this.#revId = this.#uuid();
     }
-    console.log("Current revision", this.#rev);
+    // console.log("Current revision", this.#rev);
 
     if (this.#usePersistence) {
       localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify(this));
