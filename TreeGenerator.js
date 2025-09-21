@@ -62,16 +62,15 @@ class ExtState extends GeneratorState {
     const extensionSignal = node.signal;
 
     if (!extensionSignal.value[extensionSignalKey]) {
-
       const id = this.uuid();
       const ext = this.ext(extensionSignalKey);
 
-              const options = {
-          // persistence:false,
-          // synchronization:false
-          structural: true,
-        };
-      const signal = this.state.set(id, ext == "arr" ? [] : {}, options );
+      const options = {
+        // persistence:false,
+        // synchronization:false
+        structural: true,
+      };
+      const signal = this.state.set(id, ext == "arr" ? [] : {}, options);
 
       extensionSignal.value[extensionSignalKey] = signal;
     }
@@ -92,12 +91,11 @@ class SignalState extends GeneratorState {
     if (!node.value[key]) {
       const id = this.uuid();
 
-
-        const options = {
-          // persistence:false,
-          // synchronization:false
-          structural: true,
-        };
+      const options = {
+        // persistence:false,
+        // synchronization:false
+        structural: true,
+      };
 
       const signal = this.state.set(id, {}, options);
       // console.log("KKK", node.value);
@@ -129,6 +127,7 @@ export class TreeGenerator {
   constructor(data, state, options = {}) {
     this.#data = data;
     this.#state = state;
+
     this.debug = options.debug || false;
     this.logger = new Logger(this.debug);
     this.#states = Object.fromEntries([PlainState, ExtState, SignalState].map((Class) => new Class(this.#state, this.logger)).map((c) => [c.name, c]));
@@ -139,9 +138,9 @@ export class TreeGenerator {
     const segments = this.#parsePathSegments(path);
     const state = segments.reduce(this.reducer.bind(this), { node: this.#data, mode: "plain" });
 
-    if(state.node.ext){
+    if (state.node.ext) {
       state.node.signal.value = data;
-    }else{
+    } else {
       state.node.value = data;
     }
 

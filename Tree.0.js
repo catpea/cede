@@ -1,5 +1,3 @@
-import { uuid } from "./utilities.js";
-
 import { Signal } from "./Signal.js";
 import { State } from "./State.js";
 
@@ -11,25 +9,19 @@ import { TreeGenerator } from "./TreeGenerator.js";
 export class Tree {
   #domain;
   state;
-  #data;
+  #data = {};
 
   #disposables;
 
   constructor(domain, debug = false) {
-    this.#disposables = new Set();
-
     this.#domain = domain;
-
     this.state = new State(domain);
-    this.#data = this.state.set(uuid(), {}, { structural:true } )
     this.arborist = new Arborist(this.#data, this.state, { debug });
-
-
-
 
     this.treeGenerator = new TreeGenerator(this.#data, this.state, { debug });
     this.treeNavigator = new TreeNavigator(this.#data, { debug });
 
+    this.#disposables = new Set();
   }
 
   dispose() {
@@ -50,18 +42,12 @@ export class Tree {
   // Commands //
 
   read(path) {
-    return this.arborist.read(path);
+    return this.treeNavigator.read(path);
   }
 
   create(path, data = null) {
-
-    const signalified = this.signalify(data, 'BARE!');
-
-    console.dir('signalified');
-    console.dir(signalified);
-
-    return this.arborist.write(path, signalified);
-
+    const signalified = this.signalify(data);
+    return this.treeGenerator.write(path, signalified);
   }
 
   restore(path, data = null) {
@@ -86,9 +72,6 @@ export class Tree {
     return path.match(/[.]([\w\d]+)$/)?.[1] || "";
   }
 
-  get data() {
-    return this.#data;
-  }
   dump() {
     console.log(this.#data);
   }
@@ -108,6 +91,13 @@ export class Tree {
     );
   }
 
+  uuid() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID == "function") {
+      return crypto.randomUUID();
+    } else {
+      return Math.random().toString(36).substr(2);
+    }
+  }
 
   // Serialization Toolkit //
 
@@ -115,17 +105,13 @@ export class Tree {
   // options.persistence = false;
   // options.synchronization = false;
 
-  signalify(input, bare) {
+  signalify(input) {
     const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
     walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
-
-
-      if(bare && isRoot) return; // return bare root for signal creation elsewhere
-
+      // console.info('RRR', key, node, parent, path, isLeaf, isRoot)
       const options = {};
       if (!isLeaf) options.structural = true;
-      return this.state.set(uuid(), node, options);
-
+      return this.state.set(this.uuid(), node, options);
     };
     const response = walker.walk(input);
     // console.log('RRR', input);

@@ -1,3 +1,37 @@
+export class DisposableManager {
+  #disposables = new Set();
+  dispose() {
+    this.#disposables.forEach((disposable) => (disposable.dispose ? disposable.dispose() : disposable()));
+    this.#disposables.clear();
+  }
+  addDisposable(...disposables) {
+    disposables.flat(Infinity).forEach((d) => this.#disposables.add(d));
+  }
+}
+
+export class DisposablesDispose {
+  #disposables = new Map();
+  constructor() {}
+
+  add(disposable, key = "this") {
+    if (typeof disposable?.dispose !== "function") throw new TypeError("This is for SomeDisposable.dispose() only.");
+    if (!this.#disposables.has(key)) this.#disposables.set(key, new Set());
+    this.#disposables.get(key).add(disposable);
+  }
+  has(key = "this") {
+    const set = this.#disposables.get(key);
+    return !!(set && set.size > 0);
+  }
+  dispose(key = "this") {
+    const set = this.#disposables.get(key);
+    if (!set || set.size === 0) return;
+    const disposables = Array.from(set);
+    set.clear();
+    this.#disposables.delete(key);
+    disposables.map((o) => o.dispose());
+  }
+}
+
 export class DisposableSignalListener {
   #unsubscribe;
 
@@ -40,10 +74,7 @@ export class DisposableSingleDirectionBinder {
     this.options = Object.assign({ html: false, autorun: true }, options);
     this.isDisposed = false;
 
-    this.#unsubscribe = this.signal.subscribe(
-      this.#listener.bind(this),
-      this.options.autorun
-    );
+    this.#unsubscribe = this.signal.subscribe(this.#listener.bind(this), this.options.autorun);
   }
 
   #listener(value) {
@@ -82,10 +113,7 @@ export class DisposableBidirectionalBinder {
     this.isDisposed = false;
 
     // Update DOM when signal changes
-    this.#unsubscribe = this.signal.subscribe(
-      this.#signalListener.bind(this),
-      this.options.autorun
-    );
+    this.#unsubscribe = this.signal.subscribe(this.#signalListener.bind(this), this.options.autorun);
 
     // Update signal when DOM changes
     this.#domListener = this.#domListenerFn.bind(this);
@@ -135,9 +163,7 @@ export class DisposableBidirectionalBinder {
     } else if (this.element instanceof HTMLSelectElement) {
       newValue = this.element.value;
     } else if (this.element.isContentEditable) {
-      newValue = this.options.html
-        ? this.element.innerHTML
-        : this.element.textContent;
+      newValue = this.options.html ? this.element.innerHTML : this.element.textContent;
     }
 
     this.signal.value = newValue;
@@ -152,10 +178,7 @@ export class DisposableBidirectionalBinder {
       } else {
         this.element.addEventListener("input", this.#domListener);
       }
-    } else if (
-      this.element instanceof HTMLTextAreaElement ||
-      this.element instanceof HTMLSelectElement
-    ) {
+    } else if (this.element instanceof HTMLTextAreaElement || this.element instanceof HTMLSelectElement) {
       this.element.addEventListener("input", this.#domListener);
       this.element.addEventListener("change", this.#domListener);
     } else if (this.element.isContentEditable) {
@@ -175,6 +198,37 @@ export class DisposableBidirectionalBinder {
     }
     this.#unsubscribe();
     this.#detachDomListener();
+    this.isDisposed = true;
+  }
+}
+
+export class DisposableEventBinder {
+  #domListener;
+  /**
+   * @param {HTMLElement} element - the element to bind to
+   * @param {String} event - the event to minitor
+   * @param {Function} domListener - the listener to execute
+   * @param {Object} [options]
+   *   options.html = true → bind to innerHTML
+   *   options.autorun = true (default) → initialize with current value
+   */
+  constructor(element, event, domListener, options = {}) {
+    this.element = element;
+    this.event = event;
+    this.#domListener = domListener;
+    this.options = Object.assign({ html: false, autorun: true }, options);
+    this.isDisposed = false;
+
+    this.element.addEventListener(this.event, this.#domListener);
+  }
+
+  dispose() {
+    if (this.isDisposed) {
+      console.warn("Binder already disposed.");
+      return;
+    }
+    this.element.removeEventListener(this.event, this.#domListener);
+
     this.isDisposed = true;
   }
 }

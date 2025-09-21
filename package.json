@@ -24,9 +24,11 @@
   },
   "homepage": "https://github.com/catpea/cede#readme",
   "dependencies": {
-    "cletus": "^1.0.2"
+    "cletus": "^1.0.2",
+    "mlue": "^1.0.7"
   },
   "localDependencies": {
-    "../cletus/": "^1.0.2"
+    "../cletus/": "^1.0.2",
+    "../mlue/": "^1.0.7"
   }
 }

@@ -66,18 +66,22 @@ export class TreeNavigator {
   read(path) {
     this.logger.group(`read: "${path}"`);
     const segments = this.#parsePathSegments(path);
+
     const state = segments.reduce(this.reducer.bind(this), { node: this.#data, mode: "plain" });
+
     this.logger.groupEnd();
     return state.node;
   }
 
   reducer(state, segment, currentIndex, array) {
+
     this.logger.log(`Reading segment ${segment} (${currentIndex}) using currentState=${state.mode} reader`);
     const currentState = this.#states[state.mode];
+
+
+    // NEXT STATE
     const node = currentState.access(state.node, segment);
     const mode = currentState.nextState(array[currentIndex], array[currentIndex+1]);
-    this.logger.log({ node, mode });
-
     return { node, mode };
   }
 

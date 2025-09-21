@@ -1,7 +1,7 @@
 import { TreeWalker } from "./TreeWalker.js";
 
 export class Signal {
-  #rev = 0;
+  #rev = 1;
   #revId = this.#uuid();
   #conflicts = [];
 
@@ -25,15 +25,13 @@ export class Signal {
   #conflicting;
 
   constructor(value, config) {
-
     const defaults = {
-
       domain: "signal",
       name: "unnamed",
 
       structural: false, // serialize structural information only
       conflicting: 16,
-      storageSeparator: '--',
+      storageSeparator: "--",
 
       persistence: false,
       scheduling: false,
@@ -61,29 +59,21 @@ export class Signal {
     this.#readSubscribers = new Set();
     this.#disposables = new Set();
 
-
     if (this.#usePersistence) this.initializePersistence();
     if (this.#useSynchronization) this.addDisposable(this.synchronize());
     // WARNING: ORDER MATTERS: this must come after this.addDisposable(this.synchronize());
-    if (this.#usePersistence) this.addDisposable( ()=> localStorage.removeItem(this.#domain + this.#storageSeparator + this.#name) )
-
+    if (this.#usePersistence) this.addDisposable(() => localStorage.removeItem(this.#domain + this.#storageSeparator + this.#name));
   }
 
   // Persistence Layer
 
   initializePersistence() {
-
-
     const currentValue = localStorage.getItem(this.#domain + this.#storageSeparator + this.#name);
-
     if (currentValue === null) {
-
-      localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify( this ));
-
+      localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify(this));
     } else {
       this.sync(JSON.parse(currentValue));
     }
-
   }
 
   synchronize() {
@@ -99,15 +89,15 @@ export class Signal {
   sync({ rev, revId, value }) {
     // evId tie-break uses string comparison.
 
-    if(rev == this.#rev){
+    if (rev == this.#rev) {
       this.#conflicts.push({ rev, revId, value });
       if (this.#conflicts.length > this.#conflicting) this.#conflicts.splice(0, this.#conflicts.length - this.#conflicting);
     }
 
     if (rev > this.#rev) {
-      this.set(value, rev++); // +1 prevents conflicts
+      this.set(value, rev + 1); // +1 prevents conflicts
     } else if (rev == this.#rev && revId > this.#revId) {
-      this.set(value, rev++);
+      this.set(value, rev + 1); // +1 prevents conflicts
     } else {
       // ignore because revision is lower than the current
     }
@@ -115,6 +105,12 @@ export class Signal {
 
   // Getters / Information
 
+  get rev() {
+    return this.#rev;
+  }
+  get revId() {
+    return this.#revId;
+  }
   get id() {
     return this.#id;
   }
@@ -144,23 +140,28 @@ export class Signal {
   }
 
   set value(v) {
-    this.set(v)
+    this.set(v);
   }
 
-  set(newValue, rev=null, bump=true){
+  set(newValue, rev = null, bump = true) {
     if (Object.is(newValue, this.#value)) return;
 
     this.#value = newValue;
 
-    if(bump){
-      this.#rev = rev||this.#rev++;
+    console.log("Previous revision", this.#rev, { bump });
+    if (bump) {
+      if (rev !== undefined && rev !== null) {
+        this.#rev = rev;
+      } else {
+        this.#rev = this.#rev + 1;
+      }
+
       this.#revId = this.#uuid();
     }
+    console.log("Current revision", this.#rev);
 
     if (this.#usePersistence) {
-
-      localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify( this ));
-
+      localStorage.setItem(this.#domain + this.#storageSeparator + this.#name, JSON.stringify(this));
     }
 
     this.notify();
@@ -228,7 +229,7 @@ export class Signal {
   }
 
   addDisposable(...disposables) {
-    disposables.flat(Infinity).forEach(d => this.#disposables.add(d));
+    disposables.flat(Infinity).forEach((d) => this.#disposables.add(d));
   }
 
   // Static Functions
@@ -263,15 +264,14 @@ export class Signal {
     return child;
   }
 
-
   #isSignal(obj = this.#value) {
-    return obj && typeof obj.toJSON === 'function';
+    return obj && typeof obj.toJSON === "function";
   }
   #isPrimitive(value = this.#value) {
-      return (
-          value === null || // Check for null
-          typeof value !== 'object' && typeof value !== 'function' // Check for non-object and non-function types
-      );
+    return (
+      value === null || // Check for null
+      (typeof value !== "object" && typeof value !== "function") // Check for non-object and non-function types
+    );
   }
 
   [Symbol.toPrimitive](hint) {
@@ -293,38 +293,19 @@ export class Signal {
     }
   }
 
-
-  toJSON(){
-      const key = `${this.#domain}${this.#storageSeparator}${this.#name}`;
-      const val =  this.serialize(this.#value);
-      // const type = this.#isPrimitive()?'primitive':'???';
-      return { key, val, };
+  toJSON() {
+    const key = `${this.#domain}${this.#storageSeparator}${this.#name}`;
+    const val = this.serialize(this.#value);
+    const rev = this.#rev;
+    const revId = this.#revId;
+    return { key, rev, revId, val };
   }
 
-  serialize( input = this ) {
-    const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
-    walker.visitor = (key, node, parent, path, isLeaf) => {
-
-      if(this.#isSignal(node)){
-        return node.toJSON();
-      }else{
-        if(this.#isPrimitive(node)){
-          return node;
-        }else{
-          const key = `${this.#domain}${this.#storageSeparator}${this.#name}`;
-          const type = this.#structural?'structural':'primitive'
-
-          if(this.#structural){
-            return { type, key };
-          }else{
-            const val = this.#value;
-            return { type, key, val };
-          }
-        }
-      }
-
+  serialize(input = this) {
+    const walker = new TreeWalker({ walkReplacements: true, depthFirst: false });
+    walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
+      if (this.#isSignal(node)) return node.toJSON();
     };
-    return walker.walk( input );
-
+    return walker.walk(input);
   }
 }

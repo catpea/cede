@@ -26,19 +26,25 @@
         margin: 0;
         line-height: 1.2;
         -webkit-font-smoothing: antialiased;
-        font-family: system-ui, -apple-system, 'Segoe UI', Roboto,
-                     Helvetica, Arial, sans-serif, 'Apple Color Emoji',
-                     'Segoe UI Emoji', 'Segoe UI Symbol';
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif,
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol";
       }
-
     </style>
   </head>
   <body>
-
     <style>
       /* lightweight, no external libs */
       .login {
-        max-width: min(300px, 100vw);
+        max-width: min(400px, 100vw);
         margin: 2rem auto;
         display: grid;
         gap: 0.5rem;
@@ -47,23 +53,46 @@
         background: #2c2b32;
 
         padding: 2rem;
-        box-shadow: rgb(0,0,0,0.2) 2px 2px 8px 6px;
+        box-shadow: rgb(0, 0, 0, 0.2) 2px 2px 8px 6px;
         border-radius: 8px;
+
+        &.disabled {
+          box-shadow: none;
+          transform: translate(2px, 2px);
+        }
+        .horizontal {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+          gap: 10px; /* Adjust the gap between buttons as needed */
+        }
       }
 
-      .login label, .login > small {
+      .login label,
+      .login > small {
         font-size: 0.9rem;
         color: #555;
+        sup {
+          float: right;
+        }
       }
 
       .login input {
         padding: 0.4rem 0.5rem;
-        border: 1px solid #ccc;
+        border: 1px solid #555;
         border-radius: 4px;
         font-size: 1rem;
       }
 
-      .login button {
+      .login button[type="button"] {
+        margin-top: 1.5rem;
+        padding: 0.5rem;
+        border: 1px solid #555;
+
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .login button[type="submit"] {
         margin-top: 1.5rem;
         padding: 0.5rem;
         background: #0066ff;
@@ -75,157 +104,209 @@
       .login button:hover {
         background: #0055dd;
       }
-      *[disabled]{
-        opacity: .15;
+      *[disabled] {
+        opacity: 0.15;
       }
     </style>
 
-    <form class="login">
-
-      <label for="usernameInput">username</label>
+    <form id="loginForm" class="login">
+      <label for="usernameInput">username <sup id="usernameRevisions"></sup></label>
       <input type="text" id="usernameInput" autocomplete="username" />
 
-      <label for="passwordInput">password</label>
+      <label for="passwordInput">password <sup id="passwordRevisions"></sup></label>
       <input type="text" id="passwordInput" autocomplete="current-password" />
+      💾
+      <div class="horizontal">
+        <button id="dumpButton" type="button">💻 (F12)</button>
+        <button id="loadButton" type="button">💾 Load</button>
+        <button id="loginButton" type="submit">🧹 Log in &raquo;</button>
+      </div>
 
-      <button id="loginButton" type="submit">Log in</button>
       <small>user interface simulation</small>
     </form>
 
     <h5>Substrate Test Results</h5>
     <pre id="output"></pre>
 
+    <div id="treeContainerElement"></div>
+
     <script type="module">
-      ////////////////
-
-      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder } from "./Disposables.js";
-
+      import { DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder, DisposableEventBinder, DisposableManager } from "./Disposables.js";
       import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
-
+      import { visualiseSignalTree, download } from "./utilities.js";
       import { Signal } from "./Signal.js";
       import { Tree } from "./Tree.js";
 
-      class DisposableManager {
-        #disposables = new Set();
-
-        dispose() {
-          this.#disposables.forEach((disposable) => disposable());
-          this.#disposables.clear();
-        }
-
-        addDisposable(...disposables) {
-          disposables.flat(Infinity).forEach(d => this.#disposables.add(d));
-        }
-
-      }
       const disposableManager = new DisposableManager();
 
-
       localStorage.clear();
+
       const tree = new Tree("kernel-test", false);
 
-      describe("Tree operations", () => {
-        // tree.load({
-        //   "my-app": {
-        //     "user": {
-        //       "profile.obj": {
-        //         "id": "d8460a47-fd71-499a-9c75-a379d8349378"
-        //       }
-        //     },
-        //     "workspace": {
-        //       "gradient.arr": {
-        //         "id": "fa0e44ff-454c-4317-bd09-884cfebdf989"
-        //       }
-        //     }
-        //   }
-        // });
-        // tree.dump();
+      describe("Tree operations v1", () => {
+        it("should create gradient.arr", { }, () => {
 
-        it("should create profile.obj", () => {
+          tree.create("/my-app/user/gradient.arr/0", { color: "red", percent: 0 });
+          tree.create("/my-app/user/gradient.arr/1", { color: "green" });
+
+        });
+
+        it("should create profile.obj", { }, () => {
           const expected = { password: "hunter2" };
+
           tree.create("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
 
           const profile = tree.read("/my-app/user/profile.obj");
-          console.assert(profile.ext == "obj", "Does not have .obj extension");
-          console.assert(profile.signal instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
-          console.assert(profile.signal.value instanceof Signal, "The value of the .signal must also be a signal");
+          console.assert(profile instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
 
           const username = tree.read("/my-app/user/profile.obj/username");
           console.assert(username instanceof Signal, "profile.obj/username must be a signal");
-          console.assert(typeof username.value === 'string', "profile.obj/username.value must be a simple primitive string.");
 
-          console.assert(username !== undefined, "Unable to retrieve data from tree, possibly due to new root logic where signal is an actual signal object...");
-          console.log(username);
+          // return;
+          // // const profile = tree.read("/my-app/user/profile.obj");
+          // console.assert(profile.ext == "obj", "Does not have .obj extension");
+          // console.assert(profile.signal instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
+          // console.assert(profile.signal.value instanceof Signal, "The value of the .signal must also be a signal");
+          // console.assert(typeof username.value === "string", "profile.obj/username.value must be a simple primitive string.");
+          // console.assert(username !== undefined, "Unable to retrieve data from tree, possibly due to new root logic where signal is an actual signal object...");
+          disposableManager.addDisposable(username.subscribe((v) => (usernameRevisions.textContent = `(rev:${username.rev})`)));
 
           const disposableUsername = new DisposableBidirectionalBinder(username, usernameInput);
-
-          const password = tree.read('/my-app/user/profile.obj/password');
+          const password = tree.read("/my-app/user/profile.obj/password");
+          disposableManager.addDisposable(password.subscribe((v) => (passwordRevisions.textContent = `(rev:${password.rev})`)));
           const disposablePassword = new DisposableBidirectionalBinder(password, passwordInput);
-          console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value );
-
-          ///
-
-          disposableManager.addDisposable( ()=>disposableUsername.dispose(), ()=>usernameInput.value = '', ()=>usernameInput.setAttribute('disabled', 'disabled') );
-          disposableManager.addDisposable( ()=>disposablePassword.dispose(), ()=>passwordInput.value = '', ()=>passwordInput.setAttribute('disabled', 'disabled') );
-          disposableManager.addDisposable( ()=>loginButton.setAttribute('disabled', 'disabled') );
-
+          console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value);
+          const dumpButtonClick = new DisposableEventBinder(dumpButton, "click", () => console.log(JSON.stringify(tree, null, 2)));
+          disposableManager.addDisposable(dumpButtonClick);
+          disposableManager.addDisposable(
+            () => disposableUsername,
+            () => (usernameInput.value = ""),
+            () => usernameInput.setAttribute("disabled", "disabled"),
+          );
+          disposableManager.addDisposable(
+            () => disposablePassword,
+            () => (passwordInput.value = ""),
+            () => passwordInput.setAttribute("disabled", "disabled"),
+          );
+          disposableManager.addDisposable(() => loginButton.setAttribute("disabled", "disabled"));
+          disposableManager.addDisposable(() => loginForm.classList.add("disabled"));
         });
-
-
-
-
-        // it("should create profile.obj/password", () => {
-        //   const expected = "hunter2";
-        //   const password = tree.mk("/my-app/user/profile.obj/password", expected);
-        //   const actual = password.value;
-        //   console.assert(actual == expected);
-        // });
-
-        // it("should create gradient.arr/0/color", () => {
-        //   const expected = "#ff0000";
-        //   const gradient = tree.mk("/my-app/workspace/gradient.arr/0/color", expected);
-        //   const actual = gradient.value;
-        //   console.assert(actual == expected);
-        // });
-
-        // it("should create gradient.arr/0/percent", () => {
-        //   const expected = 0;
-        //   const percent = tree.mk("/my-app/workspace/gradient.arr/0/percent", expected);
-        //   const actual = percent.value;
-        //   console.assert(actual == expected);
-        // });
-
-        // it("should return a serializable JSON", { todo: false }, () => {
-        //   // console.log( tree.save() );
-        //   // const result = tree.load();
-        //   // console.log("FLATTENED");
-        //   // const flat = tree.flatten();
-        //   // console.table(flat);
-        //   // console.log(JSON.stringify(flat, 0, 2));
-        //   // flat.forEach(o=>tree.mk(o))
-        // });
-
-        it("save, clear, and load", {todo:true}, () => {
-
-          const data = JSON.stringify(tree, null, 2);
-          tree.save();
-
-          setTimeout(()=>{
-            tree.clear();
-            disposableManager.dispose();
-          }, 30_000);
-
-          // tree.load(data);
-
-        });
-
       });
+
+      // 0 &&
+      //   describe("Tree operations v1", () => {
+      //     it("should create profile.obj", { todo: true }, () => {
+      //       tree.create("/my-app/user/gradient.arr/0", { color: "red" });
+      //       // tree.write("/my-app/user/gradient.arr/0", { color: "red" });
+
+      //       const expected = { password: "hunter2" };
+      //       tree.create("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
+
+      //       const profile = tree.read("/my-app/user/profile.obj");
+      //       console.assert(profile.ext == "obj", "Does not have .obj extension");
+      //       console.assert(profile.signal instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
+      //       console.assert(profile.signal.value instanceof Signal, "The value of the .signal must also be a signal");
+
+      //       const username = tree.read("/my-app/user/profile.obj/username");
+      //       console.assert(username instanceof Signal, "profile.obj/username must be a signal");
+      //       console.assert(typeof username.value === "string", "profile.obj/username.value must be a simple primitive string.");
+
+      //       console.assert(username !== undefined, "Unable to retrieve data from tree, possibly due to new root logic where signal is an actual signal object...");
+      //       console.log(username);
+
+      //       disposableManager.addDisposable(username.subscribe((v) => (usernameRevisions.textContent = `(rev:${username.rev})`)));
+
+      //       const disposableUsername = new DisposableBidirectionalBinder(username, usernameInput);
+
+      //       const password = tree.read("/my-app/user/profile.obj/password");
+      //       disposableManager.addDisposable(password.subscribe((v) => (passwordRevisions.textContent = `(rev:${password.rev})`)));
+      //       const disposablePassword = new DisposableBidirectionalBinder(password, passwordInput);
+      //       console.assert(password.value == "hunter2", `Incorrect password value, received:`, password.value);
+
+      //       ///
+
+      //       // console.log(JSON.stringify(profile.signal, null, 2));
+      //       const dumpButtonClick = new DisposableEventBinder(dumpButton, "click", () => console.log(JSON.stringify(tree, null, 2)));
+      //       disposableManager.addDisposable(dumpButtonClick);
+
+      //       const stateLoader = async () => {
+      //         const snapshot = await download("memory-beta.json");
+      //         console.dir(snapshot);
+      //         tree.load(snapshot);
+      //       };
+      //       const loadButtonClick = new DisposableEventBinder(loadButton, "click", stateLoader);
+      //       disposableManager.addDisposable(loadButtonClick);
+
+      //       ///
+
+      //       disposableManager.addDisposable(
+      //         () => disposableUsername,
+      //         () => (usernameInput.value = ""),
+      //         () => usernameInput.setAttribute("disabled", "disabled"),
+      //       );
+      //       disposableManager.addDisposable(
+      //         () => disposablePassword,
+      //         () => (passwordInput.value = ""),
+      //         () => passwordInput.setAttribute("disabled", "disabled"),
+      //       );
+      //       disposableManager.addDisposable(() => loginButton.setAttribute("disabled", "disabled"));
+      //       disposableManager.addDisposable(() => loginForm.classList.add("disabled"));
+      //     });
+
+      // it("should create profile.obj/password", () => {
+      //   const expected = "hunter2";
+      //   const password = tree.mk("/my-app/user/profile.obj/password", expected);
+      //   const actual = password.value;
+      //   console.assert(actual == expected);
+      // });
+
+      // it("should create gradient.arr/0/color", () => {
+      //   const expected = "#ff0000";
+      //   const gradient = tree.mk("/my-app/workspace/gradient.arr/0/color", expected);
+      //   const actual = gradient.value;
+      //   console.assert(actual == expected);
+      // });
+
+      // it("should create gradient.arr/0/percent", () => {
+      //   const expected = 0;
+      //   const percent = tree.mk("/my-app/workspace/gradient.arr/0/percent", expected);
+      //   const actual = percent.value;
+      //   console.assert(actual == expected);
+      // });
+
+      // it("should return a serializable JSON", { todo: false }, () => {
+      //   // console.log( tree.save() );
+      //   // const result = tree.load();
+      //   // console.log("FLATTENED");
+      //   // const flat = tree.flatten();
+      //   // console.table(flat);
+      //   // console.log(JSON.stringify(flat, 0, 2));
+      //   // flat.forEach(o=>tree.mk(o))
+      // });
+
+      // it("save, clear, and load", { todo: false }, () => {
+      //   // const snapshot = tree.save();
+      //   // console.log("snapshot", snapshot);
+      //   // tree.load(snapshot);
+      // });
+
+      // it("save, clear, and load", { todo: true }, () => {
+      //   // const snapshot = tree.save();
+      //   // tree.persist();
+      //   // tree.clear();
+      //   // disposableManager.dispose();
+      //   // console.log("snapshot", snapshot);
+      //   // tree.load(snapshot);
+      // });
+      // });
 
       // Wait for tests to complete and display results
       const results = await waitForCompletion();
       document.getElementById("output").textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n`;
       console.log(results);
+
       tree.dump();
+      const shutdown = visualiseSignalTree(treeContainerElement, tree.data);
     </script>
   </body>
 </html>

@@ -1,4 +1,8 @@
+import { uuid } from "./utilities.js";
+
 import { Signal } from "./Signal.js";
+// import { TreeWalker } from "./TreeWalker.js";
+// import { ReactiveArray } from "./ReactiveArray.js";
 
 export class State {
   #domain;
@@ -7,15 +11,28 @@ export class State {
   #redoStack;
 
   constructor(domain) {
-
     this.#domain = domain;
     this.#signals = new Map();
+
     this.#undoStack = [];
     this.#redoStack = [];
-
   }
 
+  toJSON() {
+    // const walker = new TreeWalker();
+    // walker.visitor = (key, node, parent, path) => {
+    //   // if (node.ext) return { id: node.id, signal: node.signal };
+    // };
+    // const tree = walker.walk(this.#signals);
 
+    // walker.walk(this.#signals);
+    const data = [];
+    for (const signal of this.#signals.values()) {
+      // data[signal.name] = signal.toJSON();
+      data.push(signal.toJSON());
+    }
+    return data;
+  }
 
   // // --- Creation ---
   // newValue(name, value) {
@@ -36,25 +53,22 @@ export class State {
   //   return objectSignal;
   // }
 
-
-  get size(){
+  get size() {
     return this.#signals.size;
   }
 
-  clear(){
-    for (const signal of this.#signals.values() ){
+  clear() {
+    for (const signal of this.#signals.values()) {
       signal.dispose();
     }
     this.#signals.clear();
   }
 
-  set(name, value=null, options) {
-
+  set(name, value = null, options) {
     let signal;
-    if(this.#signals.has(name)){
-     signal = this.#signals.get(name);
-    }else{
-
+    if (this.#signals.has(name)) {
+      signal = this.#signals.get(name);
+    } else {
       const defaults = {
         name,
         domain: this.#domain,
@@ -62,9 +76,8 @@ export class State {
         synchronization: true,
       };
       // console.log('1>>>', value, Object.assign({}, defaults,options))
-     signal = new Signal(value, Object.assign({}, defaults,options));
-
-     this.#signals.set(name, signal);
+      signal = new Signal(value, Object.assign({}, defaults, options));
+      this.#signals.set(name, signal);
     }
     signal.value = value;
     return signal;
@@ -73,11 +86,6 @@ export class State {
   get(name) {
     return this.#signals.get(name);
   }
-
-
-
-
-
 
   // --- Mutations with Undo ---
   setValue(name, value) {
@@ -112,7 +120,11 @@ export class State {
     const signal = this.get(objectName);
     if (!signal) throw new Error(`Signal ${objectName} not found`);
     const oldValue = { ...signal.value };
-    const doChange = () => { const obj = { ...signal.value }; delete obj[key]; signal.value = obj; };
+    const doChange = () => {
+      const obj = { ...signal.value };
+      delete obj[key];
+      signal.value = obj;
+    };
     const undoChange = () => (signal.value = oldValue);
 
     doChange();
