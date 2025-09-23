@@ -102,3 +102,62 @@ export async function download(url) {
     console.error("There was a problem with the fetch operation:", error);
   }
 }
+
+
+
+
+
+
+
+
+// Watcher Upgrade
+// 1: fn, should become before, and we need to add after support
+// 2: cosument which functions change objects and which change arrays createting Object and Array example
+
+// class ReactiveArray extends Array {
+//   constructor(...a) {
+//     super(...a);
+
+//     const members = [
+
+//       // String members
+//       'push', 'pop', 'shift', 'unshift', 'splice', 'sort',
+
+//       // RegExp for numeric indexes
+//       /^\d+$/,
+
+//       // Object with string name and callback function
+//       {
+//         name: 'reverse',
+//         before: () => console.log('Before-callback: reverse is being called')
+//       },
+
+//       // Object with function name checker
+//       {
+//         name: (prop) => prop === 'length',
+//         after: () => console.log('After-callback: length was being modified')
+//       },
+
+//       {
+//         name: (prop) => [ 'push', 'pop', 'shift', 'unshift', 'splice', 'sort'].includes(prop),
+//         after: () => console.log('After-callback: array has likely been modified')
+//       },
+
+//       // Object with RegExp name
+//       {
+//         name: /^custom/,
+//         after: () => console.log('after-callback: custom method about to be called')
+//       }
+//     ];
+
+//     return Watcher.watch(this, members, member => {
+//       console.log(`[Watcher] ${member} was accessed/modified`);
+//       // Announce changes in your own way
+//     });
+//   } // constructor
+
+
+// }
+// const signalWrapper = new Signal()
+
+// const reactiveArray = new ReactiveArray()

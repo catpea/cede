@@ -24,8 +24,13 @@ export class Arborist {
 
   // what should the next state be
   ensureSignal(state, segment) {
-    if (!(segment in state.location.value)) state.location.value[segment] = this.#state.set(uuid(), segment.endsWith(".arr") ? [] : {});
+
+    if (!(segment in state.location.value)){
+
+      state.location.value[segment] = this.#state.set(uuid(), segment.endsWith(".arr") ? [] : {});
+    }
     return state.location.value[segment];
+
   }
 
   nextState(state, segment) {
@@ -33,9 +38,9 @@ export class Arborist {
     return { location };
   }
 
-  assignData(location, data) {
-    location.value = this.#state.set(uuid(), data);
-  }
+  // assignData(location, data) {
+  //   location.value = this.#state.set(uuid(), data);
+  // }
 
   read(path) {
     const root = this.#data;
@@ -48,9 +53,13 @@ export class Arborist {
   write(path, data) {
     const root = this.#data;
     const segments = this.#parsePathSegments(path);
+
     const finalState = segments.reduce( (state, segment, index, segments) => {
+
+
       return this.nextState(state, segment, index, segments);
-      }, { location: root, });
+      }, { location: root });
+
     if(data) finalState.location.value = data;
     return finalState.location;
   }

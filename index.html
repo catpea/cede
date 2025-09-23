@@ -281,13 +281,19 @@
         const gradients = tree.read("/my-app/user/gradient.arr");
 
 
+        // tree.watch("/my-app/user/gradient.arr")
+
+        // tree.push("/my-app/user/gradient.arr/")
+        // tree.push("/my-app/user/gradient.arr/")
+
 
        if(1) {
 
+          // Install The Preview UI
           const gradientPreview = doc.gradientPreviewTemplate.content.cloneNode(true);
           doc.gradientDemo.appendChild( gradientPreview );
+          const previewElement = doc.gradientDemo.querySelector('#preview'); // Select The Preview UI
 
-          const cwd = new CurrentWorkingDirectory(tree, `/my-app/user/gradient.arr`);
 
           // let trash = new Set();
 
@@ -298,10 +304,12 @@
             //   trash.clear();
             // }
 
+            const cwd = new CurrentWorkingDirectory(tree, `/my-app/user/gradient.arr`);
             const gradientCSS = new StringBuilder(cwd, ["color", "percent"], (color, percent) => `${color} ${percent}%`);
-            // trash.add(()=>gradientCSS.dispose())
-            const previewElement = doc.gradientDemo.querySelector('#preview');
             const unsub = gradientCSS.subscribe(list=> previewElement.style.background = `linear-gradient(90deg, ${list.join(',')})`);
+
+
+            // trash.add(()=>gradientCSS.dispose())
             // trash.add(unsub)
           // })
 

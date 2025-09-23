@@ -403,19 +403,25 @@ export class StringBuilder {
   dependencies(){
 
     if(Array.isArray(this.#cwd.read().value)){
+
       const locationArray = this.#cwd.read();
       const signals = [ locationArray ];
+
       for( const [index, location] of locationArray.value.entries()){
         const resolved = this.#locations.map( location=>this.#cwd.read(index, location) );
         signals.push(...resolved);
       }
+
       return signals;
+
     }else{
+
       const location = this.#cwd.read();
       const signals = [ location ];
       const resolved = this.#locations.map( location=>this.#cwd.read(index, location) );
       signals.push(...resolved);
       return signals;
+
     }
   }
 
@@ -438,9 +444,13 @@ export class StringBuilder {
   }
 
   compute() {
+
+
       const combined = Signal.combineLatest(...this.dependencies())
-      const translated = Signal.map(combined, () => this.values()); // string builder uses a custom mapper as this is too much for our little Signal.map
+      const translated = Signal.map(combined, () => this.values()); // we substitute here, string builder uses a custom mapper as this is too much for our little Signal.map
       this.#responseSignal = translated;
+
+
   }
 
   subscribe(fn){
