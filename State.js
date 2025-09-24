@@ -1,8 +1,7 @@
-import { uuid } from "./utilities.js";
-
-import { Signal } from "./Signal.js";
+// import { uuid } from "./utilities.js";
 // import { TreeWalker } from "./TreeWalker.js";
 // import { ReactiveArray } from "./ReactiveArray.js";
+
 
 export class State {
   #domain;
@@ -62,6 +61,16 @@ export class State {
       signal.dispose();
     }
     this.#signals.clear();
+  }
+
+  registerDevice(device){
+
+    if( this.#signals.has(device.id) ){
+      throw new Error('Device with that ID already exists.')
+    }else{
+      this.#signals.set(device.id, device);
+    }
+
   }
 
   set(name, value = null, options) {

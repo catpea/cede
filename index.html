@@ -279,10 +279,9 @@
         }, 3_000)
 
         const gradients = tree.read("/my-app/user/gradient.arr");
-
+        gradients.subscribe(v=>'Boom!')
 
         // tree.watch("/my-app/user/gradient.arr")
-
         // tree.push("/my-app/user/gradient.arr/")
         // tree.push("/my-app/user/gradient.arr/")
 
