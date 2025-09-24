@@ -1,0 +1,26 @@
+{
+  "name": "mlue",
+  "description": "Reactive Programming With Style",
+  "version": "1.0.7",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "demo": "http-server -c-1 -o .",
+    "test": "node --import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(pathToFileURL(\"./import-map-hooks.js\"));' --test",
+    "save": "git add .; git commit -m 'Updated Release'; npm version patch; npm publish; git push --follow-tags;"
+  },
+  "keywords": [
+    "rev",
+    "fp"
+  ],
+  "author": "@catpea",
+  "license": "GPL",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/catpea/mlue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/catpea/mlue/issues"
+  },
+  "homepage": "https://github.com/catpea/mlue#readme"
+}

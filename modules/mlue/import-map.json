@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "#signals": "./signals.js",
+    "#Rectangle": "./Rectangle.js",
+    "#Revision": "./Revision.js",
+    "#Watcher": "./Watcher.js"
+  }
+}

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bootstrap demo</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>😵‍💫</text></svg>" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "#signals": "./signals.js",
+          "#Rectangle": "./Rectangle.js",
+          "#Revision": "./Revision.js",
+          "#Watcher": "./Watcher.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+
+
+
+
+    <div class="container text-center">
+
+      <div class="row pt-5 justify-content-center">
+        <div class="col col-lg-2">
+        </div>
+        <div class="col-auto pt-5">
+
+          <div class="card" style="min-width: 5rem;">
+            <svg class="card-img-top" width="220" height="200" xmlns="http://www.w3.org/2000/svg">
+              <rect id="rect1" width="10" height="10" x="10" y="10" rx="1" ry="20" fill="Tomato" />
+              <rect id="rect2" width="10" height="10" x="110" y="10" rx="1" ry="20" fill="Olive" />
+            </svg>
+            <div class="card-body">
+              <h5 id="comment" class="card-title">Rectangle Example</h5>
+              <p class="card-text"></p>
+              <a href="index.html" class="btn btn-secondary">&laquo; Return</a>
+              <a href="playground-rectangle.html" class="btn btn-primary">Retime <i class="bi bi-clock-history"></i></a>
+            </div>
+
+          </div>
+
+        </div>
+        <div class="col col-lg-2">
+        </div>
+      </div>
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+    <script type="module">
+      /* JavaScript module code here */
+
+      import Rectangle from "#Rectangle";
+      import { combineLatest } from "#signals";
+
+      let rect1 = new Rectangle(50, 50);
+      const rect1graphic = document.querySelector('#rect1');
+      rect1.rev.subscribe(rev=>{
+        rect1graphic.setAttribute('width', rect1.width);
+        rect1graphic.setAttribute('height', rect1.height);
+      });
+
+      let rect2 = new Rectangle(100, 100);
+      const rect2graphic = document.querySelector('#rect2');
+      rect2.rev.subscribe(rev=>{
+        rect2graphic.setAttribute('width', rect2.width);
+        rect2graphic.setAttribute('height', rect2.height);
+      });
+
+      // Prints Once
+      console.log("PLAIN", Rectangle.compareArea(rect1, rect2)); // -2
+
+      // Revision is a separate Signal based system
+      const unsubscribeFn = combineLatest(rect1.rev, rect2.rev) // watching revisions for change
+        .subscribe(() => console.log("REACTIVE:", Rectangle.compareArea(rect1, rect2))); // subscribing, and on initialize and change printing
+
+
+
+
+      setInterval(()=>{
+        rect1.height = 100*Math.random(); // triggers, because of Watcher
+        rect1.width =  100*Math.random(); // triggers, because of Watcher
+      }, 100+(1_000*Math.random()));
+
+      setInterval(()=>{
+        rect2.height = 100*Math.random(); // triggers, because of Watcher
+        rect2.width =  100*Math.random(); // triggers, because of Watcher
+      }, 100+(1_000*Math.random()));
+
+      const unsubscribeFn2 = combineLatest(rect1.rev, rect2.rev) // watching revisions for change
+      .subscribe(() => {
+        const rect1area = rect1.getArea();
+        const rect2area = rect2.getArea();
+        comment.innerText = 'Eat The ' + (rect1area>rect2area?'Tomato':'Olive');
+      }); // subscribing, and on initialize and change printing
+
+
+      rect1.rev.inc(); // triggers because of Revision
+    </script>
+  </body>
+</html>

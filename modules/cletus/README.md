@@ -112,12 +112,14 @@ Modern JavaScript is asynchronous. Cletus handles async tests naturally:
 
 ```javascript
 test('fetch data from API', async () => {
+
   const response = await fetch('/api/data');
   const data = await response.json();
 
   if (!data.success) {
     throw new Error('API returned unsuccessful response');
   }
+
 });
 
 test('using promises directly', () => {

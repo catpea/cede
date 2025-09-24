@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bootstrap demo</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>😵‍💫</text></svg>" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
+    <script type="importmap">
+      {
+        "imports": {
+          "#signals": "./signals.js",
+          "#Rectangle": "./Rectangle.js",
+          "#Revision": "./Revision.js",
+          "#Watcher": "./Watcher.js"
+        }
+      }
+    </script>
+
+  </head>
+  <body>
+
+    <div class="container text-center">
+      <div class="row pt-5 justify-content-center">
+        <div class="col-sm-12 col-md-8 col-lg-6 pt-5">
+
+          <div class="card w-100">
+            <div class="card-body">
+              <a href="index.html" class="btn btn-secondary">&laquo;</a>
+              <button id="addPersonToArrayButton" class="btn btn-success"><i class="bi bi-person-arms-up"></i></button>
+              <button id="addRobotToArrayButton" class="btn btn-danger"><i class="bi bi-robot"></i></button>
+              <button id="shuffleArrayButton" class="btn btn-primary">Shuffle <i class="bi bi-shuffle"></i></button>
+              <p class="card-text"></p>
+              <h5 id="comment" class="card-title">Array Contents</h5>
+              <ul id="arrayContents" class="list-group list-group-flush">
+              </ul>
+            </div>
+          </div>
+
+
+            <div class="alert alert-light opacity-50 m-5" role="alert">
+              <small class="text-muted">
+                The point of this is in the source code (right-click + view source) right where it says "MAGIC",
+                it is a demonstration of a reactive array, a list of data that announces when it changed.
+              </small>
+            </div>
+
+
+        </div>
+      </div>
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+    <script type="module">
+      /* JavaScript module code here */
+
+      import Revision from "#Revision";
+      import Watcher from "#Watcher";
+
+
+
+
+
+
+
+
+      //MAGIC:
+      // THIS IS THE MAGIC RIGHT HERE:
+
+      class ReactiveArray extends Array {
+        constructor(...a){
+          super(...a);
+          this.rev = new Revision(this, 0);
+          const members = [ 'push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse', /^\d+$/ ]; // NOTE: /^\d+$/ matches arr[0-90-9...]
+          return Watcher.watch(this, members, ()=>this.rev.inc());
+        }
+      }
+
+
+
+
+
+
+
+
+
+      let people = new ReactiveArray(); // Create an empty array
+
+      // this is how you listen to changes
+      people.rev.subscribe(([rev, uuid], data)=>console.info(`Array revision has changed to revision #${rev} (${uuid}) the length is now ${data.length}`));
+
+
+      // This just makes the user interface ReactiveArray helps a lot, but eficently making the GUI is messy
+      people.rev.subscribe(([rev, uuid])=>{
+
+        const uniqueKey = 'id';
+        const previousIndices = [...arrayContents.children].map(child=>child.id);
+        const currentIndices = [...people].map(person=>person[uniqueKey]);
+
+        // ITEM REMOVAL
+        const removed = previousIndices.filter(item => !currentIndices.includes(item));
+        if(removed.length) console.log('Array removed', ...removed);
+        // TODO: this is not part of this Reactive Array test
+
+        // ITEM ADDING
+        const addedIndices = currentIndices.filter(indice => !previousIndices.includes(indice));
+        const addedObjects = addedIndices.map(key=>people.find(person=>person[uniqueKey]==key));
+        if(addedObjects.length){
+          for(const newObject of addedObjects) {
+            const listItem = document.createElement('li');
+            listItem.id = newObject[uniqueKey]
+            listItem.classList.add('list-group-item')
+            makeElementDraggable(listItem, people);
+            listItem.innerText = JSON.stringify(newObject);
+            listItem.innerText = `${newObject.name} (age ${newObject.age})`
+            arrayContents.append(listItem);
+          }
+        }
+
+        // ITEM RE-ORDERING
+        // Create a mapping of indices for the original array
+        if(previousIndices.length){
+          const indexMap = new Map();
+          previousIndices.forEach((item, index) => indexMap.set(item, index));
+          const reorderedIndices = currentIndices.map(item => indexMap.get(item));
+          const orderChanges = reorderedIndices.map((index, i) => ({ id: currentIndices[i], originalIndex: index, newIndex: i }) ); //PLEASE NOTE: order is naturally sorted, and this is not needed.sort((a, b) => a.newIndex - b.newIndex);;
+           const newElementOrder = orderChanges.map(({id})=>arrayContents.querySelector('#'+id));
+           newElementOrder.forEach(element => arrayContents.appendChild(element));
+        }
+
+      });
+
+      // Add sample objects to the array
+      people.push({ id:"a0", name: "Alice", age: 30 });
+      people.push({ id:"a1", name: "Bob", age: 25 });
+
+      // this one is delayed 1 second (1_000 milliseconds)
+      setTimeout(()=>{
+        people.push({ id:"a2", name: "Charlie", age: 35 });
+      },1_000)
+
+      // Connect Buttons
+      addPersonToArrayButton.addEventListener('click', () => people.push(generatePerson()) ); // <--------- THIS IS SPECIAL, it is normal code,
+      addRobotToArrayButton.addEventListener('click', () => people.push(generateRobot()) ); // <--------- THIS IS SPECIAL, it is normal code,
+      shuffleArrayButton.addEventListener('click', () => shuffle(people) ); // note how we just shuffle people and the UI automatically updates
+
+
+
+
+
+
+
+
+
+
+      // These are extras:
+
+      function generatePerson(){ // just a robot generator
+
+        const names = ['Sarah', 'Annie', 'Clara', 'Ella', 'Florence', 'Cora', 'Martha', 'Laura', 'Nellie', 'Grace', 'Carrie', 'Maude', 'Mabel', 'Bessie', 'Jennie', 'Gertrude', 'Julia', 'Hattie', 'Edith', 'Mattie', 'Rose', 'Catherine', 'Lillian', 'Ada', 'Lillie', 'Helen', 'Jessie', 'Louise', 'Ethel', 'Lula', 'Myrtle'];
+        const randomIndex = Math.floor(Math.random() * names.length);
+        return { id:`a${Date.now () }`, name: names[randomIndex], age: (20+79*Math.random()).toFixed() }
+      }
+      function generateRobot(){ // just a robot generator
+        const adj = [ 'Revengeful', 'Cruel', 'Vicious', 'Malicious', 'Hateful', 'Hostile', 'Petty', 'Harsh', 'Mean', 'Nasty', 'Merciless', 'Relentless', 'Venomous', 'Spiteful', 'Malevolent', 'Retaliatory', 'Resentful', 'Evil', 'Malignant', 'Virulent', 'Unforgiving', 'Pitiless', 'Uncharitable', 'Implacable', 'Malign', 'Wrathful', 'Grim', 'Unrelenting', 'Despiteful', 'Baneful', 'Catty', 'Narrow-minded', 'Baleful', 'Silly' ];
+        const randomIndex = Math.floor(Math.random() * adj.length);
+        return { id:`a${Date.now () }`, name: `${adj[randomIndex]} Robot`, age: (1*Math.random()).toFixed(2) }
+      }
+
+      // Utility/Helper Function, array shuffle
+      function shuffle(array) {
+          // Loop through the array from the last element to the second element
+          for (let i = array.length - 1; i > 0; i--) {
+              // Generate a random index from 0 to i
+              const randomIndex = Math.floor(Math.random() * (i + 1));
+              // Swap the current element with the element at the random index
+              [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
+          }
+      }
+
+      // This is just drag and drop functionality, there is kind of nothing to see here, and this is usually programmed through some helpful library
+      // note: this is still special because we only edit the array here, we do not move web browser's HTML elements, that is done by the array
+      let draggedItem = null;
+      function makeElementDraggable(item, sourceArray){
+        item.setAttribute('draggable', "true");
+        item.style.cursor = 'move';
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            setTimeout(() => {
+                item.style.display = 'none'; // Hide the item being dragged
+            }, 0);
+        });
+        item.addEventListener('dragend', () => {
+            setTimeout(() => {
+                draggedItem.style.display = 'block'; // Show the item again
+                draggedItem = null;
+            }, 0);
+        });
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Prevent default to allow drop
+        });
+        item.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            item.style.border = '2px dashed var(--bs-primary)'; // Highlight the drop target
+        });
+        item.addEventListener('dragleave', () => {
+            item.style.border = ''; // Remove highlight
+        });
+        item.addEventListener('drop', () => {
+          if(item.parentNode !== draggedItem.parentNode) return console.warn('Same list please.');
+            if (draggedItem) {
+                const draggedIndex = Array.from(item.parentNode.children).indexOf(draggedItem);
+                const targetIndex = Array.from(item.parentNode.children).indexOf(item);
+
+                // Short Version
+                // In-place update of the sourceArray based on the drag-and-drop operation
+                // if (draggedIndex < targetIndex) {
+                //     for (let i = draggedIndex; i < targetIndex; i++)   [sourceArray[i], sourceArray[i + 1]] = [sourceArray[i + 1], sourceArray[i]];
+                // } else {
+                //     for (let i = draggedIndex; i > targetIndex; i--) [sourceArray[i], sourceArray[i - 1]] = [sourceArray[i - 1], sourceArray[i]];
+                // }
+
+                // The Longer, more readable
+                // Clearer to read splice update the sourceArray based on the drag-and-drop operation
+                if (draggedIndex < targetIndex) {
+                    // Move draggedItem after the target item
+                    // Adjust the sourceArray
+                    const movedItem = sourceArray[draggedIndex];
+                    // Remove the item from the original position
+                    sourceArray.splice(draggedIndex, 1);
+                    // Insert the item at the new position
+                    sourceArray.splice(targetIndex, 0, movedItem);
+                } else {
+                    // Move draggedItem before the target item
+                    // Adjust the sourceArray
+                    const movedItem = sourceArray[draggedIndex];
+                    // Remove the item from the original position
+                    sourceArray.splice(draggedIndex, 1);
+                    // Insert the item at the new position
+                    sourceArray.splice(targetIndex, 0, movedItem);
+                }
+            }
+            item.style.border = ''; // Remove highlight
+        });
+      } // end makeDraggable
+
+
+    </script>
+  </body>
+</html>
