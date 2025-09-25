@@ -2,19 +2,23 @@ import {Signal} from './Signal.js';
 import {Watcher} from './Watcher.js';
 
 export class Arr extends Array {
-  #signal;
+
   constructor(data, options) {
     data?super(...data):super();
-    this.#signal = new Signal(this, options);
+    this[Signal.Symbol] = new Signal(this, options);
     const members = [
       // RegExp for numeric indexes
-      /^\d+$/,
+      {
+        name: /^\d+$/,
+        after: () => this[Signal.Symbol].notify()
+      },
+
       {
         name: (prop) => ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse', 'length'].includes(prop),
-        after: () => this.#signal.notify()
+        after: () => this[Signal.Symbol].notify()
       },
     ];
     return Watcher.watch(this, members /*, member => {} */);
   }
-  subscribe(...etc){ return this.#signal.subscribe(...etc); }
+  subscribe(...etc){ return this[Signal.Symbol].subscribe(...etc); }
 }

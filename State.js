@@ -73,24 +73,24 @@ export class State {
 
   }
 
-  set(name, value = null, options) {
-    let signal;
-    if (this.#signals.has(name)) {
-      signal = this.#signals.get(name);
-    } else {
-      const defaults = {
-        name,
-        domain: this.#domain,
-        persistence: true,
-        synchronization: true,
-      };
-      // console.log('1>>>', value, Object.assign({}, defaults,options))
-      signal = new Signal(value, Object.assign({}, defaults, options));
-      this.#signals.set(name, signal);
-    }
-    signal.value = value;
-    return signal;
-  }
+  // set(name, value = null, options) {
+  //   let signal;
+  //   if (this.#signals.has(name)) {
+  //     signal = this.#signals.get(name);
+  //   } else {
+  //     const defaults = {
+  //       name,
+  //       domain: this.#domain,
+  //       persistence: true,
+  //       synchronization: true,
+  //     };
+  //     // console.log('1>>>', value, Object.assign({}, defaults,options))
+  //     signal = new Signal(value, Object.assign({}, defaults, options));
+  //     this.#signals.set(name, signal);
+  //   }
+  //   signal.value = value;
+  //   return signal;
+  // }
 
   get(name) {
     return this.#signals.get(name);

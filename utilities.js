@@ -6,6 +6,134 @@ export function uuid() {
   }
 }
 
+
+
+
+
+
+export function visualiseReactiveTree(containerElement, reactiveObject) {
+  const className = 'vrt';
+  const subscriptions = new Set();
+  // Clear the container
+  containerElement.innerHTML = "";
+
+  // Create the root UL element
+  const rootUl = document.createElement("ul");
+  rootUl.classList.add(className);
+
+  containerElement.appendChild(rootUl);
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .${className} {
+      sup { opacity: .25;}
+      var { color: blue}
+      data { color: red}
+    }
+  `;
+
+  containerElement.appendChild(style);
+
+  // Recursive function to build tree nodes
+
+  function buildTreeNode(reactiveObject, parentUl) {
+    // Get the actual value if it's a signal
+    const value = reactiveObject && typeof reactiveObject === "object" && "value" in reactiveObject ? reactiveObject.value : reactiveObject;
+
+    if (value === null || value === undefined) {
+      const li = document.createElement("li");
+      // li.textContent = String(value);
+      li.textContent = `${typeof value}: ${String(value)}`;
+      parentUl.appendChild(li);
+      return;
+    }
+
+    // Handle primitives (string, number, boolean)
+    if (typeof value !== "object") {
+
+      const li = document.createElement("li");
+
+      const data = document.createElement("data");
+      data.setAttribute('value', String(value));
+      data.textContent = `${String(value)}`;
+      li.appendChild(data);
+
+      const sup = document.createElement("sup");
+      sup.textContent = ` (typeof ${typeof value})`;
+      li.appendChild(sup);
+
+
+        // li.textContent = `${typeof v}: ${String(v)}`;
+
+      parentUl.appendChild(li);
+      return;
+    }
+
+    // Handle arrays
+    console.log('AAA', Array.isArray(value), value, value.length)
+    if (Array.isArray(value)) {
+      const li = document.createElement("li");
+      li.textContent = `Array[${value.length}]`;
+      parentUl.appendChild(li);
+
+      if (value.length > 0) {
+        const nestedUl = document.createElement("ul");
+        li.appendChild(nestedUl);
+
+        value.forEach((item, index) => {
+          const indexLi = document.createElement("li");
+          indexLi.textContent = `[index #${index}]`;
+          nestedUl.appendChild(indexLi);
+
+          const indexUl = document.createElement("ul");
+          indexLi.appendChild(indexUl);
+          console.log("###$$$", item);
+          buildTreeNode(item, indexUl);
+        });
+      }
+      return;
+    }
+
+    // Handle objects
+    const keys = Object.keys(value);
+    const li = document.createElement("li");
+
+    if(keys.length){
+      // li.textContent = `Object (${keys.length} ${keys.length == 1 ? "property" : "properties"}: ${keys.join(', ')})`;
+      li.textContent = `Object`;
+    }else{
+      li.textContent = `Object without properties`;
+    }
+    parentUl.appendChild(li);
+
+    if (keys.length > 0) {
+      const nestedUl = document.createElement("ul");
+      li.appendChild(nestedUl);
+
+      keys.forEach((key, index) => {
+        const keyLi = document.createElement("li");
+        keyLi.classList.add('key');
+        keyLi.textContent = `.${key}`;
+        nestedUl.appendChild(keyLi);
+
+        const keyUl = document.createElement("ul");
+        keyLi.appendChild(keyUl);
+        buildTreeNode(value[key], keyUl);
+      });
+    }
+  }
+
+  // Start building the tree
+  buildTreeNode(reactiveObject, rootUl);
+  return { dispose: () => subscriptions.forEach((bye) => bye()) };
+}
+
+
+
+
+
+
+
 export function visualiseSignalTree(containerElement, signalData) {
   const subscriptions = new Set();
   // Clear the container
@@ -90,6 +218,14 @@ export function visualiseSignalTree(containerElement, signalData) {
   buildTreeNode(signalData, rootUl);
   return { dispose: () => subscriptions.forEach((bye) => bye()) };
 }
+
+
+
+
+
+
+
+
 
 export async function download(url) {
   try {

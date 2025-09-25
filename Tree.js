@@ -1,34 +1,34 @@
 import { uuid } from "./utilities.js";
 
-import { Signal } from "./Signal.js";
 import { State } from "./State.js";
 
 import { Arborist } from "./Arborist.js";
 import { TreeWalker } from "./TreeWalker.js";
-import { TreeNavigator } from "./TreeNavigator.js";
-import { TreeGenerator } from "./TreeGenerator.js";
+import { Builder, Obj, Arr, Signal } from "./modules/supernatural/index.js";
+
+
+// import { TreeNavigator } from "./TreeNavigator.js";
+// import { TreeGenerator } from "./TreeGenerator.js";
 
 export class Tree {
   #domain;
+  #root;
+
   state;
-  #data;
 
   #disposables;
 
   constructor(domain, debug = false) {
+
     this.#disposables = new Set();
 
     this.#domain = domain;
 
     this.state = new State(domain);
-    this.#data = this.state.set(uuid(), {}, { structural:true } )
-    this.arborist = new Arborist(this.#data, this.state, { debug });
 
+    this.#root = new Obj(null, {})
 
-
-
-    this.treeGenerator = new TreeGenerator(this.#data, this.state, { debug });
-    this.treeNavigator = new TreeNavigator(this.#data, { debug });
+    this.arborist = new Arborist(this.#root, this.state, { debug });
 
   }
 
@@ -50,35 +50,49 @@ export class Tree {
   // Commands //
 
   read(path) {
-    return this.arborist.read(path);
+    return Builder.create(this.#root, path);
   }
 
-  create(path, data = null) {
+  create(base, data = null) {
 
-    const signalified = this.signalify(data, 'BARE!');
+    const baseObject = Builder.create(this.#root, base );
 
-    console.dir('signalified');
-    console.dir(signalified);
+    if(data){
 
-    return this.arborist.write(path, signalified);
+      console.log('data', data);
+      const flattened = this.flatten(data);
+      console.log('flattened', base, flattened);
+
+      for(const [location, value] of flattened){
+        const [path, property] = [location.split('/').slice(0, -1).join('/'), location.split('/').pop()];
+        if(path){
+          const baseObject1 = Builder.create(baseObject,  path );
+          baseObject1[property] = new Signal(value);
+        }else{
+          baseObject[property] = new Signal(value);
+        }
+
+      }
+
+    }
 
   }
 
   restore(path, data = null) {
-    return this.treeGenerator.write(path, this.signalize(data));
+    // return this.treeGenerator.write(path, this.signalize(data));
   }
 
-  write(path, value) {
-    const node = this.treeNavigator.read(path);
-    if (!node) throw new Error(`Path not found. Create the path with mk prior to use. (${path})`);
+  // write(path, value) {
+  //   const node = this.treeNavigator.read(path);
+  //   if (!node) throw new Error(`Path not found. Create the path with mk prior to use. (${path})`);
 
-    if (node.signal instanceof Signal) {
-      node.signal.value = value;
-    } else {
-      node.value = value;
-    }
-    return node.signal;
-  }
+  //   if (node.signal instanceof Signal) {
+  //     node.signal.value = value;
+  //   } else {
+  //     node.value = value;
+  //   }
+  //   return node.signal;
+  // }
 
   // Utilities //
 
@@ -87,10 +101,10 @@ export class Tree {
   }
 
   get data() {
-    return this.#data;
+    return this.#root;
   }
   dump() {
-    console.log(this.#data);
+    console.log(this.#root);
   }
 
   isFile(node) {
@@ -115,80 +129,94 @@ export class Tree {
   // options.persistence = false;
   // options.synchronization = false;
 
-  signalify(input, bare) {
-    const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
-    walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
+  // signalify(input, bare) {
+  //   const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
+  //   walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
 
 
-      if(bare && isRoot) return; // return bare root for signal creation elsewhere
+  //     if(bare && isRoot) return; // return bare root for signal creation elsewhere
 
-      const options = {};
-      if (!isLeaf) options.structural = true;
-      return this.state.set(uuid(), node, options);
+  //     const options = {};
+  //     if (!isLeaf) options.structural = true;
+  //     return this.state.set(uuid(), node, options);
 
-    };
-    const response = walker.walk(input);
-    // console.log('RRR', input);
-    // console.log('RRR', response);
-    return response;
-  }
+  //   };
+  //   const response = walker.walk(input);
+  //   // console.log('RRR', input);
+  //   // console.log('RRR', response);
+  //   return response;
+  // }
 
-  // convert key:val to signals
-  signalize(key, data) {
-    if (key === null || key === undefined) throw new Error(` Key must not be undefined. Received "${key}"`);
-    if (!data) throw new Error(`Data is required. Received "${data}"`);
-    let signalValue;
-    for (const [propertyName, propertyValue] of Object.entries(data)) {
-      if (this.isPrimitive(propertyValue)) {
-        signalValue = propertyValue;
-      } else if (Array.isArray(propertyValue)) {
-        signalValue = [];
-        for (const element of propertyValue) {
-          signalValue.push(signalize(element.key, element.val));
-        }
-      } else {
-        // isObject
-        signalValue = {};
-        for (const property of propertyValue) {
-          signalValue[property] = signalize(property.key, property.val);
-        }
-      }
-    }
-    const [name, domain] = key.split(/--/);
-    const signal = new Signal(signalValue, { name, domain, persistence: true, synchronization: true });
-    return signal;
-  }
+  // // convert key:val to signals
+  // signalize(key, data) {
+  //   if (key === null || key === undefined) throw new Error(` Key must not be undefined. Received "${key}"`);
+  //   if (!data) throw new Error(`Data is required. Received "${data}"`);
+  //   let signalValue;
+  //   for (const [propertyName, propertyValue] of Object.entries(data)) {
+  //     if (this.isPrimitive(propertyValue)) {
+  //       signalValue = propertyValue;
+  //     } else if (Array.isArray(propertyValue)) {
+  //       signalValue = [];
+  //       for (const element of propertyValue) {
+  //         signalValue.push(signalize(element.key, element.val));
+  //       }
+  //     } else {
+  //       // isObject
+  //       signalValue = {};
+  //       for (const property of propertyValue) {
+  //         signalValue[property] = signalize(property.key, property.val);
+  //       }
+  //     }
+  //   }
+  //   const [name, domain] = key.split(/--/);
+  //   const signal = new Signal(signalValue, { name, domain, persistence: true, synchronization: true });
+  //   return signal;
+  // }
 
-  designalize() {
-    const walker = new TreeWalker();
-    walker.visitor = (key, node, parent, path) => {
-      if (this.isFile(node)) return node.signal.toJSON();
-    };
-    return walker.walk(this.#data);
-  }
+  // designalize() {
+  //   const walker = new TreeWalker();
+  //   walker.visitor = (key, node, parent, path) => {
+  //     if (this.isFile(node)) return node.signal.toJSON();
+  //   };
+  //   return walker.walk(this.#root);
+  // }
 
-  flatten() {
+  flatten(data){
+
     const flattened = [];
     const walker = new TreeWalker();
-    walker.visitor = (key, node, parent, path) => {
-      if (this.hasExtension(key)) flattened.push(["restore", path.join("/"), node]);
+
+    walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
+      if (isLeaf) flattened.push([path.join("/"), node]);
     };
-    walker.walk(this.designalize());
+
+    walker.walk(data);
+
     return flattened;
   }
 
-  toJSON() {
-    const walker = new TreeWalker();
-    walker.visitor = (key, node, parent, path) => {
-      if (node.ext) return { id: node.id, signal: node.signal };
-    };
-    const tree = walker.walk(this.#data);
-    return tree;
-  }
+  // flatten() {
+  //   const flattened = [];
+  //   const walker = new TreeWalker();
+  //   walker.visitor = (key, node, parent, path) => {
+  //     if (this.hasExtension(key)) flattened.push(["restore", path.join("/"), node]);
+  //   };
+  //   walker.walk(this.designalize());
+  //   return flattened;
+  // }
 
-  stringify() {
-    return JSON.stringify(this, null, 2);
-  }
+  // toJSON() {
+  //   const walker = new TreeWalker();
+  //   walker.visitor = (key, node, parent, path) => {
+  //     if (node.ext) return { id: node.id, signal: node.signal };
+  //   };
+  //   const tree = walker.walk(this.#root);
+  //   return tree;
+  // }
+
+  // stringify() {
+  //   return JSON.stringify(this, null, 2);
+  // }
 
   save() {
     const content = this.stringify();
@@ -222,6 +250,6 @@ export class Tree {
       }
       return undefined;
     };
-    this.#data = walker.walk(data);
+    this.#root = walker.walk(data);
   }
 }

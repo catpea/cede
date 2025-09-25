@@ -4,6 +4,8 @@
   descend(root, 'a/b.arr/0/d/e/f/g');
   plus existing path checking.
 */
+import { Obj } from './Obj.js';
+import { Arr } from './Arr.js';
 
 export class Builder {
   static ARRAY_SUFFIX = '.arr';
@@ -16,15 +18,7 @@ export class Builder {
    * @param options - Configuration options
    * @returns The root object (for chaining)
    */
-  static create(
-    target = {},
-    pathExpression,
-    options = {
-      immutable: false,
-      arrayFactory: () => [],
-      objectFactory: () => ({})
-    }
-  ) {
+  static create( target = {}, pathExpression, options = { immutable: false, arrayFactory: () => new Arr(null, {}), objectFactory: () => new Obj(null, {}) } ) {
     // Input validation
     this.validateInputs(target, pathExpression);
 
@@ -34,27 +28,31 @@ export class Builder {
 
     const segments = this.parsePath(pathExpression);
 
-    console.log( segments );
+    console.log('SEGMENTS:', segments );
 
     // Build nested structure
-    segments.reduce((current, { key, isArray }, index) => {
+    const finalTarget = segments.reduce((current, { key, isArray }, index) => {
+
+      console.log('CURRENT:', key, current );
+
+
       // Skip the last segment as it's the final destination
-      if (index === segments.length - 1) return current;
+      // if (index === segments.length - 1) return current;
 
       if (!(key in current)) {
 
         // const nextSegment = segments[index + 1];
 
-        current[key] = isArray
-          ? options.arrayFactory()
-          : options.objectFactory();
+        current[key] = isArray ? options.arrayFactory() : options.objectFactory();
 
       }
 
       return current[key];
+
     }, workingTarget);
 
-    return workingTarget;
+    console.log({workingTarget, finalTarget})
+    return finalTarget;
   }
 
   /**

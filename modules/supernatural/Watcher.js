@@ -8,10 +8,13 @@ export class Watcher {
    */
   static watch(context, members, subscriberFn) {
     // Process members into a normalized format
+
     const watcherConfigs = [];
+
     const originalMethods = {};
 
     members.forEach(member => {
+
       if (typeof member === 'string') {
         // Simple string member
         watcherConfigs.push({

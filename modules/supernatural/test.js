@@ -5,20 +5,35 @@ import { strict as assert } from 'node:assert';
 import { Obj } from './Obj.js';
 import { Arr } from './Arr.js';
 import { Builder } from './Builder.js';
+import { Walker } from './Walker.js';
 
+
+
+// test('walker test', (t) => {
+//   const data = { color: "#ff0000", percent: 0 , user: {name:'alice'}};
+
+//     const flattened = [];
+
+//     const walker = new Walker();
+//     walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
+//       if (isLeaf) flattened.push([path.join("/"), node]);
+//     };
+
+//     walker.walk(data);
+
+//     console.log( flattened )
+
+// });
 
 test('synchronous passing test', (t) => {
-  // This test passes because it does not throw an exception.
-
   const root = new Obj();
+  const array = Builder.create(root, '/my-app/user/gradient.arr');
 
-  Builder.create(root, '/a/b.arr/0/d/e/f/g', {
-    // immutable: true,
-    arrayFactory: () => new Arr(null, {}),
-    objectFactory: () => new Obj(null, {})
-  });
+  array.subscribe(v=>console.log(v))
 
+  Builder.create(root, '/my-app/user/gradient.arr/0');
   console.log(util.inspect(root, { colors: true, showHidden: true, depth: null }));
+
 
   assert.strictEqual(1, 1);
 });

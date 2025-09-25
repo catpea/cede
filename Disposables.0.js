@@ -1,3 +1,4 @@
+import { Signal } from "./Signal.js";
 
 class Path {
   static normalize(...a){
@@ -381,3 +382,83 @@ export class TemplateManager {
 
 
 // const gradientCSS = StringBuilder(cwd, ['color', 'percent'], (color, percent)=> `${color} ${percent}%`, list=>`linear-gradient(90deg,${list.join(',')})`);
+
+export class StringBuilder {
+  #disposableManager = new DisposableManager();
+  #responseSignal;
+
+  #cwd;
+  #locations;
+  #map;
+
+  constructor(cwd, locations, map){
+
+    this.#cwd = cwd;
+    this.#locations = locations;
+    this.#map = map;
+
+    this.compute();
+  }
+
+  dependencies(){
+
+    if(Array.isArray(this.#cwd.read().value)){
+
+      const locationArray = this.#cwd.read();
+      const signals = [ locationArray ];
+
+      for( const [index, location] of locationArray.value.entries()){
+        const resolved = this.#locations.map( location=>this.#cwd.read(index, location) );
+        signals.push(...resolved);
+      }
+
+      return signals;
+
+    }else{
+
+      const location = this.#cwd.read();
+      const signals = [ location ];
+      const resolved = this.#locations.map( location=>this.#cwd.read(index, location) );
+      signals.push(...resolved);
+      return signals;
+
+    }
+  }
+
+  values(){
+    if(Array.isArray(this.#cwd.read().value)){
+      const locationArray = this.#cwd.read();
+      const signals = [ ];
+      for( const [index, location] of locationArray.value.entries()){
+        const resolved = this.#locations.map( location=>this.#cwd.read(index, location) );
+        signals.push( this.#map( ...resolved.map(signal=>signal.value ) ));
+      }
+      return signals;
+    }else{
+      const location = this.#cwd.read();
+      const signals = [ ];
+      const resolved = this.#locations.map( location=>this.#cwd.read(index, location) );
+      signals.push( this.#map( ...resolved.map(signal=>signal.value ) ));
+      return signals;
+    }
+  }
+
+  compute() {
+
+
+      const combined = Signal.combineLatest(...this.dependencies())
+      const translated = Signal.map(combined, () => this.values()); // we substitute here, string builder uses a custom mapper as this is too much for our little Signal.map
+      this.#responseSignal = translated;
+
+
+  }
+
+  subscribe(fn){
+    return this.#responseSignal.subscribe(fn)
+  }
+
+  dispose(){
+    return this.#responseSignal.dispose(); // this does go up the parent
+  }
+
+}

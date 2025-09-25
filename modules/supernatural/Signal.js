@@ -1,6 +1,9 @@
 import { Walker } from "./Walker.js";
 
 export class Signal {
+
+  static Symbol = Symbol('Signal');
+
   #rev = 1;
   #revId = this.#uuid();
   #conflicts = [];
@@ -30,7 +33,7 @@ export class Signal {
       name: "unnamed",
 
       structural: false, // serialize structural information only
-      conflicting: 16,
+      maxConflicting: 16,
       storageSeparator: "--",
 
       persistence: false,

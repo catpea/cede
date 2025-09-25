@@ -1,7 +1,7 @@
 import { uuid } from "./utilities.js";
 
-// import { Obj, Arr } from "./modules/supernatural/index.js";
-import { Obj, Arr } from "supernatural";
+import { Obj, Arr } from "./modules/supernatural/index.js";
+// import { Obj, Arr } from "supernatural";
 
 import { Logger } from "./Logger.js";
 
