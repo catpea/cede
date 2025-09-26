@@ -25,15 +25,11 @@ import { Walker } from './Walker.js';
 
 // });
 
-test('synchronous passing test', (t) => {
+// console.log(util.inspect(root, { colors: true, showHidden: true, depth: null }));
+
+test('Create an object inside an array', (t) => {
   const root = new Obj();
   const array = Builder.create(root, '/my-app/user/gradient.arr');
-
-  array.subscribe(v=>console.log(v))
-
-  Builder.create(root, '/my-app/user/gradient.arr/0');
-  console.log(util.inspect(root, { colors: true, showHidden: true, depth: null }));
-
-
-  assert.strictEqual(1, 1);
+  const created = Builder.create(root, '/my-app/user/gradient.arr/0');
+  assert.equal(created.length, 1);
 });

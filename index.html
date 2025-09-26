@@ -79,7 +79,7 @@
       <div id="preview" style="--color: magenta" class="preview-container"></div>
     </template>
 
-    <template id="gradientTemplate">
+    <template id="colorStopTemplate">
       <style>
         .container {
           background: rgb(0 0 0 / 0.23);
@@ -233,7 +233,7 @@
 
       import { ById, CurrentWorkingDirectory, DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder, DisposableEventBinder, DisposableManager, TemplateManager } from "./Disposables.js";
 
-      import { GradientLifecycle } from "./Lifecycles.js";
+      import { ApplicationLifecycle, GradientLifecycle, ColorStopControlLifecycle } from "./Lifecycles.js";
 
       import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
       import { visualiseReactiveTree, download } from "./utilities.js";
@@ -244,76 +244,52 @@
       import { Tree } from "./Tree.js";
 
 
+      localStorage.clear();
 
-      class RenderMan {
-        #tree = new Tree("kernel-test", false);
+      // SETUP HTML TEMPLATES
 
-        #disposables = new Set();
-        #disposable = new Map();
 
-        map(o) {}
-
-        start() {}
-        stop() {}
-
-        ///
-        #scheduleQueue = new Set();
-        #schedulePending = false;
-        schedule(fn) {
-          if (this.#scheduleQueue.has(fn)) {
-            console.log("IGNORED!");
-            this.#scheduleQueue.delete(fn);
-            this.#scheduleQueue.add(fn);
-          }
-
-          this.#scheduleQueue.add(fn);
-
-          if (!this.#schedulePending) {
-            this.#schedulePending = true;
-            queueMicrotask(() => {
-              for (const f of this.#scheduleQueue) f(this);
-              this.#scheduleQueue.clear();
-              this.#schedulePending = false;
-            });
-          }
-        }
-
-        get tree() {
-          return this.#tree;
-        }
-      }
-
-      const renderman = new RenderMan();
-
-      const disposableManager = new DisposableManager();
+      // LIFECYCLE
 
       localStorage.clear();
 
-      const tree = new Tree("kernel-test", false);
+      const app = new ApplicationLifecycle('app', document.body);
 
-      const doc = new ById(document);
+      const gradientPreviewBox = new GradientLifecycle('gradientPreviewBox');
+      app.addChild(gradientPreviewBox);
 
-      // Pink Preveiew
-      const gradientPreview = doc.gradientPreviewTemplate.content.cloneNode(true);
-      doc.gradientDemo.appendChild(gradientPreview);
-      const previewElement = doc.gradientDemo.querySelector("#preview"); // Select The Preview UI
+      const gradientControlBox = new ColorStopControlLifecycle('gradientControlBox');
+      app.addChild(gradientControlBox);
+
+
+      app.initializeAll();
+
 
       describe("Tree operations v1", () => {
         // it("should create gradient.arr", {}, () => {
 
-        tree.create("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
-        tree.create("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
-        tree.create("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
-        const gradients = tree.read("/my-app/user/gradient.arr");
+        app.tree.create("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
+        app.tree.create("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
+        app.tree.create("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
+        const gradients = app.tree.read("/my-app/user/gradient.arr");
 
         setTimeout(() => {
-          tree.create("/my-app/user/gradient.arr/3", { color: "#0000ff", percent: 100 });
+          app.tree.create("/my-app/user/gradient.arr/3", { color: "#0000ff", percent: 100 });
+        }, 1_000);
+
+        setTimeout(() => {
+          app.tree.swap("/my-app/user/gradient.arr", 0 , 3);
         }, 2_000);
 
+        setTimeout(() => {
+          app.tree.create("/my-app/user/gradient.arr/0/", { percent: 0 });
+          app.tree.create("/my-app/user/gradient.arr/3/", { percent: 100 });
+        }, 3_000);
 
-        function visualizeTree() {
-          visualiseReactiveTree(treeContainerElement, tree.data);
-        }
+
+        // function visualizeTree() {
+        //   visualiseReactiveTree(treeContainerElement, tree.data);
+        // }
 
         // function displayCSSGradient() {
         //   const data = [];
@@ -335,16 +311,16 @@
 
 
 
-        const gradientLifecycle = new GradientLifecycle(tree, previewElement);
-        gradientLifecycle.initialize();
-        // When app shuts down: gradientLifecycle.terminate()
+        // const gradientLifecycle = new GradientLifecycle(tree, previewElement);
+        // gradientLifecycle.initialize();
+        // // When app shuts down: gradientLifecycle.terminate()
 
-        gradients.subscribe((v) => {
-          renderman.schedule(visualizeTree);
-          // renderman.schedule(displayCSSGradient);
-        });
+        // gradients.subscribe((v) => {
+        //   renderman.schedule(visualizeTree);
+        //   // renderman.schedule(displayCSSGradient);
+        // });
 
-        renderman.schedule(visualizeTree);
+        // renderman.schedule(visualizeTree);
         // renderman.schedule(displayCSSGradient);
 
         if (0) {

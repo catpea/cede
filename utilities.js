@@ -6,8 +6,70 @@ export function uuid() {
   }
 }
 
+export function moveNodeToIndex(node, newIndex) {
+    const parent = node.parentNode;
 
+    if (!parent) {
+        console.error('Node has no parent');
+        return;
+    }
 
+    const children = Array.from(parent.children);
+    const currentIndex = children.indexOf(node);
+
+    if (currentIndex === -1) {
+        console.error('Node not found in parent children');
+        return;
+    }
+
+    // If already at the target index, no need to move
+    if (currentIndex === newIndex) {
+        return;
+    }
+
+    // Validate new index
+    if (newIndex < 0 || newIndex >= children.length) {
+        console.error('Index out of bounds');
+        return;
+    }
+
+    // Remove the node from DOM
+    parent.removeChild(node);
+
+    // Get fresh reference to children after removal
+    const updatedChildren = Array.from(parent.children);
+
+    // Calculate the correct insertion point
+    let insertIndex = newIndex;
+    if (currentIndex < newIndex) {
+        // If moving forward, adjust index since we removed an element before it
+        insertIndex = newIndex - 1;
+    }
+
+    // Insert at the new position
+    if (insertIndex >= updatedChildren.length) {
+        // Append to end
+        parent.appendChild(node);
+    } else {
+        // Insert before the element at insertIndex
+        parent.insertBefore(node, updatedChildren[insertIndex]);
+    }
+}
+
+export class ById {
+  constructor(elementContext) {
+    return new Proxy(this, {
+      get(target, propertyName) {
+        // Handle string property names only (ignore symbols and other types)
+        if (typeof propertyName !== "string") {
+          return target[propertyName];
+        }
+        // Perform querySelector with the property name as ID
+        return elementContext.querySelector(`#${propertyName}`);
+      },
+    });
+  }
+}
 
 
 

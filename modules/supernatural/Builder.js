@@ -93,7 +93,7 @@ export class Builder {
   /**
    * Utility method for common use case
    */
-  static descend(initial, path) {
+  static dig(initial, path) {
     return this.create(initial, path);
   }
 }

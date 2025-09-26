@@ -75,20 +75,7 @@ export class CurrentWorkingDirectory {
 
 }
 
-export class ById {
-  constructor(elementContext) {
-    return new Proxy(this, {
-      get(target, propertyName) {
-        // Handle string property names only (ignore symbols and other types)
-        if (typeof propertyName !== "string") {
-          return target[propertyName];
-        }
-        // Perform querySelector with the property name as ID
-        return elementContext.querySelector(`#${propertyName}`);
-      },
-    });
-  }
-}
+
 
 export class DisposableManager {
   #disposables = new Set();
@@ -324,6 +311,21 @@ export class DisposableEventBinder {
     this.element.removeEventListener(this.event, this.#domListener);
 
     this.isDisposed = true;
+  }
+}
+
+export class ById {
+  constructor(elementContext) {
+    return new Proxy(this, {
+      get(target, propertyName) {
+        // Handle string property names only (ignore symbols and other types)
+        if (typeof propertyName !== "string") {
+          return target[propertyName];
+        }
+        // Perform querySelector with the property name as ID
+        return elementContext.querySelector(`#${propertyName}`);
+      },
+    });
   }
 }
 

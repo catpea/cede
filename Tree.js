@@ -6,7 +6,6 @@ import { Arborist } from "./Arborist.js";
 import { TreeWalker } from "./TreeWalker.js";
 import { Builder, Obj, Arr, Signal } from "./modules/supernatural/index.js";
 
-
 // import { TreeNavigator } from "./TreeNavigator.js";
 // import { TreeGenerator } from "./TreeGenerator.js";
 
@@ -19,17 +18,15 @@ export class Tree {
   #disposables;
 
   constructor(domain, debug = false) {
-
     this.#disposables = new Set();
 
     this.#domain = domain;
 
     this.state = new State(domain);
 
-    this.#root = new Obj(null, {})
+    this.#root = new Obj(null, {});
 
     this.arborist = new Arborist(this.#root, this.state, { debug });
-
   }
 
   dispose() {
@@ -53,30 +50,30 @@ export class Tree {
     return Builder.create(this.#root, path);
   }
 
-  create(base, data = null) {
-
-    const baseObject = Builder.create(this.#root, base );
-
-    if(data){
-
-      console.log('data', data);
-      const flattened = this.flatten(data);
-      console.log('flattened', base, flattened);
-
-      for(const [location, value] of flattened){
-        const [path, property] = [location.split('/').slice(0, -1).join('/'), location.split('/').pop()];
-        if(path){
-          const baseObject1 = Builder.create(baseObject,  path );
-          baseObject1[property] = new Signal(value);
-        }else{
-          baseObject[property] = new Signal(value);
-        }
-
-      }
-
-    }
-
+  swap(base, a, b) {
+    const baseObject = Builder.dig(this.#root, base);
+    [baseObject[a], baseObject[b]] = [baseObject[b], baseObject[a]];
   }
+
+  create(base, data = null) {
+    const baseObject = Builder.dig(this.#root, base);
+
+
+
+    if (data) {
+      const flattened = this.flatten(data);
+      const ensure = (o,p,f)=>o[p]?o[p]:f(o,p);
+      for (const [location, value] of flattened) {
+        const [path, property] = [location.split("/").slice(0, -1).join("/"), location.split("/").pop()];
+        const target = path?Builder.dig(baseObject, path):baseObject;
+        const sig = ensure(target, property, (target, property)=>target[property] = new Signal());
+        sig.value = value;
+      }// for
+    } // id data
+
+  } // method
+
+
 
   restore(path, data = null) {
     // return this.treeGenerator.write(path, this.signalize(data));
@@ -122,7 +119,6 @@ export class Tree {
     );
   }
 
-
   // Serialization Toolkit //
 
   // convert POJO to signal tree
@@ -132,7 +128,6 @@ export class Tree {
   // signalify(input, bare) {
   //   const walker = new TreeWalker({ walkReplacements: false, depthFirst: true });
   //   walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
-
 
   //     if(bare && isRoot) return; // return bare root for signal creation elsewhere
 
@@ -181,8 +176,7 @@ export class Tree {
   //   return walker.walk(this.#root);
   // }
 
-  flatten(data){
-
+  flatten(data) {
     const flattened = [];
     const walker = new TreeWalker();
 
