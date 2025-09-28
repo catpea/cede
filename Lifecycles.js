@@ -200,6 +200,7 @@ export class Lifecycle {
   }
 
   async initialize(){}
+  async terminate(){}
 
   async initializeAll() {
     const children = this.everyChild();
@@ -208,19 +209,33 @@ export class Lifecycle {
     }
   }
 
+  async terminateAll() {
+    const children = this.everyChild(true);
+
+    for (const child of children) {
+      await child.terminate();
+    }
+
+  }
+
   get children() {
     return this.#children;
   }
 
   // TODO, descend all children of children adding all children to the stack
-  everyChild(){
+  everyChild(leafFirst=false){
     const stack = [this];
     const traverse = (node) => {
       // Add the current node's children to the stack
       for (const child of node.children) {
-        stack.push(child);
-        // Recursively traverse the child's children
-        traverse(child);
+
+        if(leafFirst){
+          traverse(child); // Recursively traverse the child's children
+          stack.push(child);
+        }else{
+          stack.push(child);
+          traverse(child); // Recursively traverse the child's children
+        }
       }
     };
     // Start traversing from the current node
@@ -274,6 +289,22 @@ export class Lifecycle {
     return this.#parent ? this.#parent.getRoot() : this;
   }
 
+  // <template> cloning and removeal
+    cloneTemplate(category, templateElement){
+    const clone = templateElement.content.cloneNode(true);
+    clone.childNodes.forEach(node => {
+      if (node.nodeType === Node.ELEMENT_NODE) { // don't put text into the root that is not what application templates are for
+        node.setAttribute('data-source-template', category);
+      }
+    });
+    return clone;
+  }
+
+  removeTemplate(category, container){
+    const matches = container.querySelectorAll(`[data-source-template=${category}]`);
+    matches.forEach(match=>container.removeChild(match))
+  }
+
 }
 
 export class ApplicationLifecycle extends Lifecycle {
@@ -301,6 +332,60 @@ export class ApplicationLifecycle extends Lifecycle {
   }
 
 }
+
+
+
+
+export class TemplateLifecycle extends Lifecycle {
+
+  constructor(id, template, container){
+    super(id);
+    this.template = template;
+    this.container = container
+  }
+
+  async initialize() {
+
+    this.templateElement = this.root.el[this.template];
+    this.templateContainer = this.root.el[this.container];
+
+    const clone = this.cloneTemplate(this.template, this.templateElement);
+    this.templateContainer.appendChild(clone);
+
+    this.restart();
+
+  }
+
+
+
+  restart() {
+    this.stop();
+    this.start();
+  }
+
+  stop() {
+  }
+
+  start() {
+    // a template is inert, nothing to do
+  }
+
+  terminate() {
+    this.stop();
+    this.unsubscribe();
+
+    this.removeTemplate(this.template, this.templateContainer)
+
+  }
+
+}
+
+
+
+
+
+
+
 
 export class GradientLifecycle extends Lifecycle {
   gradients = [];

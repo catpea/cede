@@ -1,3 +1,7 @@
+export function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export function uuid() {
   if (typeof crypto !== "undefined" && crypto.randomUUID && typeof crypto.randomUUID == "function") {
     return crypto.randomUUID();

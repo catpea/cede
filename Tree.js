@@ -55,10 +55,8 @@ export class Tree {
     [baseObject[a], baseObject[b]] = [baseObject[b], baseObject[a]];
   }
 
-  create(base, data = null) {
+  write(base, data = null) {
     const baseObject = Builder.dig(this.#root, base);
-
-
 
     if (data) {
       const flattened = this.flatten(data);

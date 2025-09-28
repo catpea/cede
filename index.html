@@ -54,174 +54,9 @@
       }
     </style>
 
-    <!--<template id="color-picker">
-      <label for="exampleColorInput" class="form-label">Color picker</label>
-      <input type="color" class="form-control form-control-color" id="gradient0colorElement" value="#563d7c" title="Choose your color" />
-    </template>-->
-
-    <!--<template id="gradient-builder">
-      <for-each>
-        <use-template template="color-picker" data-context="color"></use-template>
-      </for-each>
-    </template>-->
-
-    <template id="gradientPreviewTemplate">
-      <style>
-        .preview-container {
-          background: var(--color, rgb(0 0 0 / 0.23));
-          border-radius: 4px;
-          padding: 0.375rem;
-          width: 100%;
-          height: 5rem;
-          margin-bottom: 2rem;
-        }
-      </style>
-      <div id="preview" style="--color: magenta" class="preview-container"></div>
-    </template>
-
-    <template id="colorStopTemplate">
-      <style>
-        .container {
-          background: rgb(0 0 0 / 0.23);
-          border-radius: 4px;
-          padding: 0.375rem;
-        }
-        .form-label {
-          margin-bottom: 0.5rem;
-        }
-
-        .form-control {
-          display: block;
-          width: 100%;
-        }
-
-        label {
-          display: inline-block;
-        }
-      </style>
-
-      <div class="container" style="display: flex; gap: 8px; margin-bottom: 2rem">
-        <div style="flex: 15%">
-          <!--<label for="color" class="form-label">Color picker</label>-->
-          <input type="color" class="form-control" id="color" value="#563d7c" title="Choose your color" />
-        </div>
-        <div style="flex: 85%">
-          <!--<label for="percent" class="form-label">Color stop position</label>-->
-          <input type="range" class="form-control" id="percent" />
-        </div>
-      </div>
-    </template>
-
     <div style="display: flex">
-      <div style="flex: 50%">
-        <style>
-          /* lightweight, no external libs */
-          .login {
-            max-width: min(400px, 100vw);
-            margin: 2rem auto;
-            display: grid;
-            gap: 0.5rem;
-            font-family: system-ui, sans-serif;
-
-            background: #2c2b32;
-
-            padding: 2rem;
-            box-shadow: rgb(0, 0, 0, 0.2) 2px 2px 8px 6px;
-            border-radius: 8px;
-
-            &.disabled {
-              box-shadow: none;
-              transform: translate(2px, 2px);
-            }
-            .horizontal {
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-              gap: 10px; /* Adjust the gap between buttons as needed */
-            }
-          }
-
-          .login label,
-          .login > small {
-            font-size: 0.9rem;
-            color: #555;
-            sup {
-              float: right;
-            }
-          }
-
-          .login input {
-            padding: 0.4rem 0.5rem;
-            border: 1px solid #555;
-            border-radius: 4px;
-            font-size: 1rem;
-          }
-
-          .login button[type="button"] {
-            margin-top: 1.5rem;
-            padding: 0.5rem;
-            border: 1px solid #555;
-
-            border-radius: 4px;
-            cursor: pointer;
-          }
-
-          .login button[type="submit"] {
-            margin-top: 1.5rem;
-            padding: 0.5rem;
-            background: #0066ff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-          }
-          .login button:hover {
-            background: #0055dd;
-          }
-          *[disabled] {
-            opacity: 0.15;
-          }
-        </style>
-        <form id="loginForm" class="login example">
-          <label for="usernameInput">username <sup id="usernameRevisions"></sup></label>
-          <input type="text" id="usernameInput" autocomplete="username" />
-
-          <label for="passwordInput">password <sup id="passwordRevisions"></sup></label>
-          <input type="text" id="passwordInput" autocomplete="current-password" />
-          💾
-          <div class="horizontal">
-            <button id="dumpButton" type="button">💻 (F12)</button>
-            <button id="loadButton" type="button">💾 Load</button>
-            <button id="loginButton" type="submit">🧹 Log in &raquo;</button>
-          </div>
-
-          <small>user interface simulation</small>
-        </form>
-      </div>
-      <div style="flex: 50%">
-        <style>
-          .gradient {
-            font-family: system-ui, sans-serif;
-            background: #2c2b32;
-
-            margin: 2rem auto;
-
-            padding: 2rem;
-            box-shadow: rgb(0, 0, 0, 0.2) 2px 2px 8px 6px;
-            border-radius: 8px;
-          }
-        </style>
-        <div id="gradientDemo" class="gradient example">
-          <!--<use-template template="gradient-builder" data-context="/my-app/user/gradient.arr"></use-template>-->
-
-          <!--<label for="exampleColorInput" class="form-label">Color picker</label>
-          <input type="color" class="form-control form-control-color" id="gradient0colorElement" value="#563d7c" title="Choose your color" />
-
-          <hr />
-
-          <label for="range1" class="form-label">Color stop position</label>
-          <input type="range" class="form-range" id="gradient0percentRangeElement" />-->
-        </div>
-      </div>
+      <div id="gradientApp" style="flex: 50%"></div>
+      <div id="loginApp" style="flex: 50%"></div>
     </div>
 
     <h5>Substrate Test Results</h5>
@@ -230,62 +65,112 @@
     <div id="treeContainerElement"></div>
 
     <script type="module">
-
       import { ById, CurrentWorkingDirectory, DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder, DisposableEventBinder, DisposableManager, TemplateManager } from "./Disposables.js";
 
-      import { ApplicationLifecycle, GradientLifecycle, ColorStopControlLifecycle } from "./Lifecycles.js";
+      import { ApplicationLifecycle, TemplateLifecycle, GradientLifecycle, ColorStopControlLifecycle } from "./Lifecycles.js";
 
       import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
-      import { visualiseReactiveTree, download } from "./utilities.js";
+      import { visualiseReactiveTree, download, sleep } from "./utilities.js";
 
       import { Builder, Obj, Arr, Signal } from "./modules/supernatural/index.js";
 
-      // import { Signal } from "./Signal.js";
       import { Tree } from "./Tree.js";
 
-
       localStorage.clear();
 
-      // SETUP HTML TEMPLATES
+      // Start The Lifecycle Tree
 
+      const app = new ApplicationLifecycle("app", document.body);
+      app.initialize();
 
-      // LIFECYCLE
+      // const gradientApp = new TemplateLifecycle('gradientTemplate1', 'gradientTemplate', 'gradientApp');
+      // app.addChild(gradientApp);
 
-      localStorage.clear();
+      //   const gradientPreviewBox = new GradientLifecycle('gradientPreviewBox');
+      //   gradientApp.addChild(gradientPreviewBox);
 
-      const app = new ApplicationLifecycle('app', document.body);
+      //   const gradientControlBox = new ColorStopControlLifecycle('gradientControlBox');
+      //   gradientApp.addChild(gradientControlBox);
 
-      const gradientPreviewBox = new GradientLifecycle('gradientPreviewBox');
-      app.addChild(gradientPreviewBox);
+      //   gradientApp.initializeAll();
+      // gradientApp.terminateAll();
 
-      const gradientControlBox = new ColorStopControlLifecycle('gradientControlBox');
-      app.addChild(gradientControlBox);
-
-
-      app.initializeAll();
-
+      // Lifecycle
 
       describe("Tree operations v1", () => {
-        // it("should create gradient.arr", {}, () => {
 
-        app.tree.create("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
-        app.tree.create("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
-        app.tree.create("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
-        const gradients = app.tree.read("/my-app/user/gradient.arr");
+        it("should write base template for gradient app", {}, () => {
+          const gradientApp = new TemplateLifecycle("gradientTemplate1", "gradientTemplate", "gradientApp");
+          app.addChild(gradientApp);
 
-        setTimeout(() => {
-          app.tree.create("/my-app/user/gradient.arr/3", { color: "#0000ff", percent: 100 });
-        }, 1_000);
+          it("should write reactive UI and initialize", {}, () => {
+            const gradientPreviewBox = new GradientLifecycle("gradientPreviewBox");
+            gradientApp.addChild(gradientPreviewBox);
 
-        setTimeout(() => {
-          app.tree.swap("/my-app/user/gradient.arr", 0 , 3);
-        }, 2_000);
+            const gradientControlBox = new ColorStopControlLifecycle("gradientControlBox");
+            gradientApp.addChild(gradientControlBox);
 
-        setTimeout(() => {
-          app.tree.create("/my-app/user/gradient.arr/0/", { percent: 0 });
-          app.tree.create("/my-app/user/gradient.arr/3/", { percent: 100 });
-        }, 3_000);
+            gradientApp.initializeAll();
+          });
 
+          it("should write reactive gradient data structures", {}, async () => {
+            // const gradients = app.tree.read("/my-app/user/gradient.arr");
+            app.tree.write("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
+            app.tree.write("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
+            app.tree.write("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
+
+            await sleep(1_000);
+            app.tree.write("/my-app/user/gradient.arr/3", { color: "#0000ff", percent: 100 });
+
+            await sleep(1_000);
+            app.tree.swap("/my-app/user/gradient.arr", 0, 3);
+
+            await sleep(1_000);
+            app.tree.write("/my-app/user/gradient.arr/0/", { percent: 0 });
+            app.tree.write("/my-app/user/gradient.arr/3/", { percent: 100 });
+          });
+
+          it("should remove application", {}, async () => {
+            await sleep(1_000);
+            gradientApp.terminateAll();
+          });
+        });
+
+        it("should write base template for login app", {}, () => {
+          const loginApp = new TemplateLifecycle("loginTemplate1", "loginTemplate", "loginApp");
+          app.addChild(loginApp);
+          loginApp.initializeAll();
+          
+          it("it should create ", {}, async () => {
+            await sleep(1_000);
+            gradientApp.terminateAll();
+          });
+          
+          
+        });
+
+        // it("should write gradient.arr", {}, () => {
+
+        if (0) {
+          app.tree.write("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
+          app.tree.write("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
+          app.tree.write("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
+
+          // const gradients = app.tree.read("/my-app/user/gradient.arr");
+
+          setTimeout(() => {
+            app.tree.write("/my-app/user/gradient.arr/3", { color: "#0000ff", percent: 100 });
+          }, 1_000);
+
+          setTimeout(() => {
+            app.tree.swap("/my-app/user/gradient.arr", 0, 3);
+          }, 2_000);
+
+          setTimeout(() => {
+            app.tree.write("/my-app/user/gradient.arr/0/", { percent: 0 });
+            app.tree.write("/my-app/user/gradient.arr/3/", { percent: 100 });
+          }, 3_000);
+        }
 
         // function visualizeTree() {
         //   visualiseReactiveTree(treeContainerElement, tree.data);
@@ -307,9 +192,6 @@
         //     previewElement.style.background = `linear-gradient(90deg, ${list})`;
         //   });
         // }
-
-
-
 
         // const gradientLifecycle = new GradientLifecycle(tree, previewElement);
         // gradientLifecycle.initialize();
@@ -358,10 +240,10 @@
         // });
 
         0 &&
-          it("should create profile.obj", {}, () => {
+          it("should write profile.obj", {}, () => {
             const expected = { password: "hunter2" };
 
-            tree.create("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
+            tree.write("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
 
             const profile = tree.read("/my-app/user/profile.obj");
             console.assert(profile instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
@@ -402,12 +284,12 @@
 
       // 0 &&
       //   describe("Tree operations v1", () => {
-      //     it("should create profile.obj", { todo: true }, () => {
-      //       tree.create("/my-app/user/gradient.arr/0", { color: "red" });
+      //     it("should write profile.obj", { todo: true }, () => {
+      //       tree.write("/my-app/user/gradient.arr/0", { color: "red" });
       //       // tree.write("/my-app/user/gradient.arr/0", { color: "red" });
 
       //       const expected = { password: "hunter2" };
-      //       tree.create("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
+      //       tree.write("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
 
       //       const profile = tree.read("/my-app/user/profile.obj");
       //       console.assert(profile.ext == "obj", "Does not have .obj extension");
@@ -460,21 +342,21 @@
       //       disposableManager.addDisposable(() => loginForm.classList.add("disabled"));
       //     });
 
-      // it("should create profile.obj/password", () => {
+      // it("should write profile.obj/password", () => {
       //   const expected = "hunter2";
       //   const password = tree.mk("/my-app/user/profile.obj/password", expected);
       //   const actual = password.value;
       //   console.assert(actual == expected);
       // });
 
-      // it("should create gradient.arr/0/color", () => {
+      // it("should write gradient.arr/0/color", () => {
       //   const expected = "#ff0000";
       //   const gradient = tree.mk("/my-app/workspace/gradient.arr/0/color", expected);
       //   const actual = gradient.value;
       //   console.assert(actual == expected);
       // });
 
-      // it("should create gradient.arr/0/percent", () => {
+      // it("should write gradient.arr/0/percent", () => {
       //   const expected = 0;
       //   const percent = tree.mk("/my-app/workspace/gradient.arr/0/percent", expected);
       //   const actual = percent.value;
@@ -512,14 +394,172 @@
       document.getElementById("output").textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n`;
       console.log(results);
 
-      tree.dump();
+      app.tree.dump();
 
       // setInterval(()=>{
-      const shutdown = visualiseSignalTree(treeContainerElement, tree.data);
+      // const shutdown = visualiseSignalTree(treeContainerElement, app.tree.data);
       // }, 3_000);
 
       console.log("---tree.data---");
-      console.dir(tree.data);
+      console.dir(app.tree.data);
     </script>
+
+    <template id="loginTemplate">
+      <style>
+        /* lightweight, no external libs */
+        .login {
+          max-width: min(400px, 100vw);
+          margin: 2rem auto;
+          display: grid;
+          gap: 0.5rem;
+          font-family: system-ui, sans-serif;
+
+          background: #2c2b32;
+
+          padding: 2rem;
+          box-shadow: rgb(0, 0, 0, 0.2) 2px 2px 8px 6px;
+          border-radius: 8px;
+
+          &.disabled {
+            box-shadow: none;
+            transform: translate(2px, 2px);
+          }
+          .horizontal {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px; /* Adjust the gap between buttons as needed */
+          }
+        }
+
+        .login label,
+        .login > small {
+          font-size: 0.9rem;
+          color: #555;
+          sup {
+            float: right;
+          }
+        }
+
+        .login input {
+          padding: 0.4rem 0.5rem;
+          border: 1px solid #555;
+          border-radius: 4px;
+          font-size: 1rem;
+        }
+
+        .login button[type="button"] {
+          margin-top: 1.5rem;
+          padding: 0.5rem;
+          border: 1px solid #555;
+
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .login button[type="submit"] {
+          margin-top: 1.5rem;
+          padding: 0.5rem;
+          background: #0066ff;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .login button:hover {
+          background: #0055dd;
+        }
+        *[disabled] {
+          opacity: 0.15;
+        }
+      </style>
+      <form id="loginForm" class="login example">
+        <label for="usernameInput">username <sup id="usernameRevisions"></sup></label>
+        <input type="text" id="usernameInput" autocomplete="username" />
+
+        <label for="passwordInput">password <sup id="passwordRevisions"></sup></label>
+        <input type="text" id="passwordInput" autocomplete="current-password" />
+        💾
+        <div class="horizontal">
+          <button id="dumpButton" type="button">💻 (F12)</button>
+          <button id="loadButton" type="button">💾 Load</button>
+          <button id="loginButton" type="submit">🧹 Log in &raquo;</button>
+        </div>
+
+        <small>user interface simulation</small>
+      </form>
+    </template>
+
+    <template id="gradientTemplate">
+      <style>
+        .gradient {
+          font-family: system-ui, sans-serif;
+          background: #2c2b32;
+
+          margin: 2rem auto;
+
+          padding: 2rem;
+          box-shadow: rgb(0, 0, 0, 0.2) 2px 2px 8px 6px;
+          border-radius: 8px;
+        }
+      </style>
+      <div id="gradientDemo" class="gradient example">
+        <!--<use-template template="gradient-builder" data-context="/my-app/user/gradient.arr"></use-template>-->
+
+        <!--<label for="exampleColorInput" class="form-label">Color picker</label>
+        <input type="color" class="form-control form-control-color" id="gradient0colorElement" value="#563d7c" title="Choose your color" />
+
+        <hr />
+
+        <label for="range1" class="form-label">Color stop position</label>
+        <input type="range" class="form-range" id="gradient0percentRangeElement" />-->
+      </div>
+    </template>
+
+    <template id="gradientPreviewTemplate">
+      <style>
+        .preview-container {
+          background: var(--color, rgb(0 0 0 / 0.23));
+          border-radius: 4px;
+          padding: 0.375rem;
+          width: 100%;
+          height: 5rem;
+          margin-bottom: 2rem;
+        }
+      </style>
+      <div id="preview" style="--color: magenta" class="preview-container"></div>
+    </template>
+
+    <template id="colorStopTemplate">
+      <style>
+        .container {
+          background: rgb(0 0 0 / 0.23);
+          border-radius: 4px;
+          padding: 0.375rem;
+        }
+        .form-label {
+          margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+          display: block;
+          width: 100%;
+        }
+
+        label {
+          display: inline-block;
+        }
+      </style>
+
+      <div class="container" style="display: flex; gap: 8px; margin-bottom: 2rem">
+        <div style="flex: 15%">
+          <!--<label for="color" class="form-label">Color picker</label>-->
+          <input type="color" class="form-control" id="color" value="#563d7c" title="Choose your color" />
+        </div>
+        <div style="flex: 85%">
+          <!--<label for="percent" class="form-label">Color stop position</label>-->
+          <input type="range" class="form-control" id="percent" />
+        </div>
+      </div>
+    </template>
   </body>
 </html>
