@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>" />
+    <title>Directory</title>
+    <style>
+      html { color-scheme: light dark; }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "cede": "../index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+
+
+    <div style="display: flex">
+      <div id="directoryListing" style="flex: 50%"></div>
+      <div id="loginApp" style="flex: 50%"></div>
+    </div>
+
+    <div id="results" class="test-results"></div>
+
+    <script type="module">
+
+      import { ApplicationLifecycle, TemplateLifecycle, RepeaterLifecycle } from "cede";
+
+      // Create Application
+      const app = new ApplicationLifecycle({id:"app", container:document.body});
+      app.initialize();
+
+      // Install Base Template
+      const loginApp = new TemplateLifecycle({id:"loginTemplate1", template:"loginTemplate", container:"loginApp"});
+      app.addChild(loginApp);
+
+      // write to the tree
+      app.tree.write("/index/apps.arr", [ {name: 'Login Box'}, {name: 'Gradient Builder'}, {name: 'Text Printer'}, ]);
+
+      const repeater1 = new RepeaterLifecycle({id:"repeater1", path:"/index/apps.arr", template:"repeaterTemplate", container:"directoryListing"});
+      app.addChild(repeater1);
+
+      repeater1.initializeAll();
+
+
+      loginApp.initializeAll();
+
+      setTimeout(()=>{
+
+        app.tree.write("/index/apps.arr/1", {name: 'Bork'});
+      app.tree.dump()
+
+
+      }, 3_000)
+
+    </script>
+
+    <template id="repeaterTemplate">
+      <h5 data-name="name">dddde</h5>
+    </template>
+
+    <template id="loginTemplate">
+      <style>
+        /* lightweight, no external libs */
+        .login {
+          max-width: min(400px, 100vw);
+          margin: 2rem auto;
+          display: grid;
+          gap: 0.5rem;
+          font-family: system-ui, sans-serif;
+
+          background: #2c2b32;
+
+          padding: 2rem;
+          box-shadow: rgb(0, 0, 0, 0.2) 2px 2px 8px 6px;
+          border-radius: 8px;
+
+          &.disabled {
+            box-shadow: none;
+            transform: translate(2px, 2px);
+          }
+          .horizontal {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px; /* Adjust the gap between buttons as needed */
+          }
+        }
+
+        .login label,
+        .login > small {
+          font-size: 0.9rem;
+          color: #555;
+          sup {
+            float: right;
+          }
+        }
+
+        .login input {
+          padding: 0.4rem 0.5rem;
+          border: 1px solid #555;
+          border-radius: 4px;
+          font-size: 1rem;
+        }
+
+        .login button[type="button"] {
+          margin-top: 1.5rem;
+          padding: 0.5rem;
+          border: 1px solid #555;
+
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .login button[type="submit"] {
+          margin-top: 1.5rem;
+          padding: 0.5rem;
+          background: #0066ff;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .login button:hover {
+          background: #0055dd;
+        }
+        *[disabled] {
+          opacity: 0.15;
+        }
+      </style>
+      <form id="loginForm" class="login example">
+        <label for="usernameInput">username <sup id="usernameRevisions"></sup></label>
+        <input type="text" id="usernameInput" autocomplete="username" />
+
+        <label for="passwordInput">password <sup id="passwordRevisions"></sup></label>
+        <input type="text" id="passwordInput" autocomplete="current-password" />
+        💾
+        <div class="horizontal">
+          <button id="dumpButton" type="button">💻 (F12)</button>
+          <button id="loadButton" type="button">💾 Load</button>
+          <button id="loginButton" type="submit">🧹 Log in &raquo;</button>
+        </div>
+
+        <small>user interface simulation</small>
+      </form>
+    </template>
+
+  </body>
+</html>

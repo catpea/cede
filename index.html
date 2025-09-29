@@ -42,6 +42,12 @@
   </head>
   <body>
     <style>
+
+    ul#testDetail {
+      list-style: none;
+      li {list-style: none;}
+      ul {list-style: none;}
+    }
       .example {
         margin-bottom: 3rem;
       }
@@ -54,23 +60,68 @@
       }
     </style>
 
+
+    <style>
+
+    :root {
+      --test-text-color-primary: DarkOrange;
+      --test-text-color-pass: DarkSlateGray;
+      --test-text-color-fail: OrangeRed;
+      --test-text-color-error: FireBrick;
+    }
+
+    .test-results {
+
+      h1,h2,h3,h4,h5,h6 {
+        color: var(--test-text-color-primary);
+        margin-bottom: 1rem;
+      }
+
+      .test {
+
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+
+        &.test-pass {
+          color: var(--test-text-color-pass);
+        }
+
+        &.test-fail {
+          color: var(--test-text-color-fail);
+        }
+
+        &.test-error {
+          color: var(--test-text-color-error);
+          padding:1rem;
+
+        }
+
+        &.test-summary {
+          color: var(--test-text-color-pass);
+        }
+
+      }
+
+    }
+
+    </style>
+
     <div style="display: flex">
       <div id="gradientApp" style="flex: 50%"></div>
       <div id="loginApp" style="flex: 50%"></div>
     </div>
 
-    <h5>Substrate Test Results</h5>
-    <pre id="output"></pre>
+    <div id="results" class="test-results"></div>
 
-    <div id="treeContainerElement"></div>
+
+
 
     <script type="module">
       import { ById, CurrentWorkingDirectory, DisposableSignalListener, DisposableSingleDirectionBinder, DisposableBidirectionalBinder, DisposableEventBinder, DisposableManager, TemplateManager } from "./Disposables.js";
-
       import { ApplicationLifecycle, TemplateLifecycle, GradientLifecycle, ColorStopControlLifecycle } from "./Lifecycles.js";
 
       import { test, describe, it, waitForCompletion } from "./modules/cletus/cletus.js";
-      import { visualiseReactiveTree, download, sleep } from "./utilities.js";
+      import { sleep } from "./utilities.js";
 
       import { Builder, Obj, Arr, Signal } from "./modules/supernatural/index.js";
 
@@ -78,36 +129,25 @@
 
       localStorage.clear();
 
-      // Start The Lifecycle Tree
+      // Start The Lifecycle Tree (The Root)
 
-      const app = new ApplicationLifecycle("app", document.body);
+      const app = new ApplicationLifecycle({id:"app", container:document.body});
+      /// NOTE: the reactive data tree is located under app.tree, ex: app.tree.dump();
       app.initialize();
-
-      // const gradientApp = new TemplateLifecycle('gradientTemplate1', 'gradientTemplate', 'gradientApp');
-      // app.addChild(gradientApp);
-
-      //   const gradientPreviewBox = new GradientLifecycle('gradientPreviewBox');
-      //   gradientApp.addChild(gradientPreviewBox);
-
-      //   const gradientControlBox = new ColorStopControlLifecycle('gradientControlBox');
-      //   gradientApp.addChild(gradientControlBox);
-
-      //   gradientApp.initializeAll();
-      // gradientApp.terminateAll();
 
       // Lifecycle
 
-      describe("Tree operations v1", () => {
+      describe("Lifecycle And Tree Operations", () => {
 
         it("should write base template for gradient app", {}, () => {
-          const gradientApp = new TemplateLifecycle("gradientTemplate1", "gradientTemplate", "gradientApp");
+          const gradientApp = new TemplateLifecycle({id:"gradientTemplate1", template:"gradientTemplate", container:"gradientApp"});
           app.addChild(gradientApp);
 
           it("should write reactive UI and initialize", {}, () => {
-            const gradientPreviewBox = new GradientLifecycle("gradientPreviewBox");
+            const gradientPreviewBox = new GradientLifecycle({id:"gradientPreviewBox"});
             gradientApp.addChild(gradientPreviewBox);
 
-            const gradientControlBox = new ColorStopControlLifecycle("gradientControlBox");
+            const gradientControlBox = new ColorStopControlLifecycle({id:"gradientControlBox"});
             gradientApp.addChild(gradientControlBox);
 
             gradientApp.initializeAll();
@@ -115,6 +155,8 @@
 
           it("should write reactive gradient data structures", {}, async () => {
             // const gradients = app.tree.read("/my-app/user/gradient.arr");
+            // const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+
             app.tree.write("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
             app.tree.write("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
             app.tree.write("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
@@ -130,124 +172,56 @@
             app.tree.write("/my-app/user/gradient.arr/3/", { percent: 100 });
           });
 
-          it("should remove application", {}, async () => {
+          it("should remove gradient application", {}, async () => {
             await sleep(1_000);
             gradientApp.terminateAll();
           });
         });
+
+
 
         it("should write base template for login app", {}, () => {
-          const loginApp = new TemplateLifecycle("loginTemplate1", "loginTemplate", "loginApp");
+          const loginApp = new TemplateLifecycle({id:"loginTemplate1", template:"loginTemplate", container:"loginApp"});
           app.addChild(loginApp);
           loginApp.initializeAll();
-          
-          it("it should create ", {}, async () => {
-            await sleep(1_000);
-            gradientApp.terminateAll();
+
+
+
+
+          it("it should create profile.obj", {}, async () => {
+            const expected = { password: "hunter2" };
+            app.tree.write("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2", logins: 3 });
+
+            const profile = app.tree.read("/my-app/user/profile.obj");
+            const username = app.tree.read("/my-app/user/profile.obj/username"); // <-- heads up these property values are signals!
+            const logins = app.tree.read("/my-app/user/profile.obj/logins"); // <-- heads up these property values are signals!
+
+            console.assert(profile instanceof Obj, "Profile's (which is .ext object) .signal must be an Obj!");
+
+            console.assert(username instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
+            console.assert(logins instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
+
+
           });
-          
-          
+
+
+          it("it should remove login application ", {}, async () => {
+            await sleep(1_000);
+            loginApp.terminateAll();
+          });
+
         });
 
-        // it("should write gradient.arr", {}, () => {
+
+
 
         if (0) {
-          app.tree.write("/my-app/user/gradient.arr/0", { color: "#ff0000", percent: 0 });
-          app.tree.write("/my-app/user/gradient.arr/1", { color: "#00ff00", percent: 33 });
-          app.tree.write("/my-app/user/gradient.arr/2", { color: "#ff00ff", percent: 66 });
 
-          // const gradients = app.tree.read("/my-app/user/gradient.arr");
-
-          setTimeout(() => {
-            app.tree.write("/my-app/user/gradient.arr/3", { color: "#0000ff", percent: 100 });
-          }, 1_000);
-
-          setTimeout(() => {
-            app.tree.swap("/my-app/user/gradient.arr", 0, 3);
-          }, 2_000);
-
-          setTimeout(() => {
-            app.tree.write("/my-app/user/gradient.arr/0/", { percent: 0 });
-            app.tree.write("/my-app/user/gradient.arr/3/", { percent: 100 });
-          }, 3_000);
-        }
-
-        // function visualizeTree() {
-        //   visualiseReactiveTree(treeContainerElement, tree.data);
-        // }
-
-        // function displayCSSGradient() {
-        //   const data = [];
-        //   const dependencies = [];
-
-        //   for (const gradient of gradients) {
-        //     const color = gradient.color;
-        //     const percent = gradient.percent;
-        //     dependencies.push(color, percent);
-        //     data.push([color, percent]);
-        //   }
-
-        //   Signal.combineLatest(...dependencies).subscribe((_) => {
-        //     const list = data.map(([color, percent]) => `${color} ${percent}%`).join(",");
-        //     previewElement.style.background = `linear-gradient(90deg, ${list})`;
-        //   });
-        // }
-
-        // const gradientLifecycle = new GradientLifecycle(tree, previewElement);
-        // gradientLifecycle.initialize();
-        // // When app shuts down: gradientLifecycle.terminate()
-
-        // gradients.subscribe((v) => {
-        //   renderman.schedule(visualizeTree);
-        //   // renderman.schedule(displayCSSGradient);
-        // });
-
-        // renderman.schedule(visualizeTree);
-        // renderman.schedule(displayCSSGradient);
-
-        if (0) {
-          // Install The Preview UI
-          // let trash = new Set();
-          // cwd.read().subscribe(v=>{
-          // if(trash.size){
-          //   trash.forEach(bye=>bye())
-          //   trash.clear();
-          // }
-          // const cwd = new CurrentWorkingDirectory(tree, `/my-app/user/gradient.arr`);
-          // const gradientCSS = new StringBuilder(cwd, ["color", "percent"], (color, percent) => `${color} ${percent}%`);
-          // const unsub = gradientCSS.subscribe(list=> previewElement.style.background = `linear-gradient(90deg, ${list.join(',')})`);
-          // trash.add(()=>gradientCSS.dispose())
-          // trash.add(unsub)
-          // })
-        }
-
-        // renderMan.repeater("/my-app/user/gradient.arr", doc.gradientPreviewTemplate, ['color', 'percent'], (el)=>{
-        //   // render into el
-        //   // return disposable
-        // })
-
-        // disposableManager.addDisposable(
-        //   gradients.subscribe((list) => {
-        //     for (const [index, gradient] of list.entries()) {
-        //       const cwd = new CurrentWorkingDirectory(tree, `/my-app/user/gradient.arr/${index}`);
-        //       new TemplateManager(gradient.id, doc.gradientTemplate, doc.gradientDemo, cwd, ["color", "percent"], disposableManager);
-        //     }
-        //   }),
-        // );
-
-        // const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
-
-        // });
-
-        0 &&
           it("should write profile.obj", {}, () => {
             const expected = { password: "hunter2" };
-
             tree.write("/my-app/user/profile.obj", { username: "zerocool", password: "hunter2" });
-
             const profile = tree.read("/my-app/user/profile.obj");
             console.assert(profile instanceof Signal, "Profile's (which is .ext object) .signal must be a signal!");
-
             const username = tree.read("/my-app/user/profile.obj/username");
             console.assert(username instanceof Signal, "profile.obj/username must be a signal");
 
@@ -280,7 +254,9 @@
             disposableManager.addDisposable(() => loginButton.setAttribute("disabled", "disabled"));
             disposableManager.addDisposable(() => loginForm.classList.add("disabled"));
           });
-      });
+
+
+      } ;
 
       // 0 &&
       //   describe("Tree operations v1", () => {
@@ -387,21 +363,64 @@
       //   // console.log("snapshot", snapshot);
       //   // tree.load(snapshot);
       // });
-      // });
+      });
 
       // Wait for tests to complete and display results
       const results = await waitForCompletion();
-      document.getElementById("output").textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n`;
-      console.log(results);
+      const testResultContainer = document.getElementById("results")
+      const detailsElement = document.createElement('ol');
+      testResultContainer.appendChild(detailsElement);
+      if(0){
+        const summaryElement = document.createElement('pre');
+        summaryElement.textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n`;
+        testResultContainer.appendChild(summaryElement);
+      }
+      class Reporter {
 
-      app.tree.dump();
+        suite(name){
+          const element = document.createElement('h2');
+          element.textContent = name;
+          return element;
+        }
 
-      // setInterval(()=>{
-      // const shutdown = visualiseSignalTree(treeContainerElement, app.tree.data);
-      // }, 3_000);
+        pass(message){
+          const element = document.createElement('p');
+          element.classList.add('test', 'test-pass');
+          element.textContent = message;
+          return element;
+        }
 
-      console.log("---tree.data---");
-      console.dir(app.tree.data);
+        fail(message){
+          const element = document.createElement('p');
+          element.classList.add('test', 'test-fail');
+          element.textContent = message;
+          return element;
+        }
+
+        error(message){
+          const element = document.createElement('p');
+          element.classList.add('test', 'test-error');
+          element.textContent = message;
+          return element;
+        }
+
+        summary(message){
+          const element = document.createElement('p');
+          element.classList.add('test', 'test-summary');
+          element.textContent = message;
+          return element;
+        }
+
+        separator(){
+          return document.createElement('hr');
+        }
+      }
+      const reporter = new Reporter();
+      for( const result of results.output ){
+        const resultElement = reporter[result.type](result.message, result.timestamp) ;
+        detailsElement.appendChild(resultElement);
+      }
+
     </script>
 
     <template id="loginTemplate">

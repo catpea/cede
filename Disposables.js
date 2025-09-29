@@ -75,8 +75,6 @@ export class CurrentWorkingDirectory {
 
 }
 
-
-
 export class DisposableManager {
   #disposables = new Set();
   dispose() {

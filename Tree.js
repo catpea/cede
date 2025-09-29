@@ -61,11 +61,18 @@ export class Tree {
     if (data) {
       const flattened = this.flatten(data);
       const ensure = (o,p,f)=>o[p]?o[p]:f(o,p);
+
+
+
       for (const [location, value] of flattened) {
+
+
         const [path, property] = [location.split("/").slice(0, -1).join("/"), location.split("/").pop()];
+        console.log('GGGG', {path, property})
         const target = path?Builder.dig(baseObject, path):baseObject;
         const sig = ensure(target, property, (target, property)=>target[property] = new Signal());
         sig.value = value;
+
       }// for
     } // id data
 
