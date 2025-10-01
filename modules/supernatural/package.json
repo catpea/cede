@@ -1,5 +1,5 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.5",
   "name": "supernatural",
   "description": "Reactive Array and Object based on Proxy and Signal",
   "type": "module",

@@ -98,10 +98,10 @@ export class Lifecycle {
     return this.#id;
   }
 
-  subscribe(category, subscribable, subscriber, options) {
-    const unsubscribe = subscribable.subscribe(subscriber);
+  subscribe(category, subscribable, signalOptions, subscriber, subscribeOptions) {
+    const unsubscribe = subscribable.subscribe(subscriber, signalOptions);
 
-    const terminatable = options?.terminate && subscribable.terminate;
+    const terminatable = subscribeOptions?.terminate && subscribable.terminate;
 
     this.addSubscription(category, unsubscribe, terminatable);
     return unsubscribe;
@@ -368,29 +368,97 @@ export class TemplateLifecycle extends Lifecycle {
   }
 }
 
+
+
 export class RepeaterLifecycle extends Lifecycle {
+
   constructor({ id, path, template, container }) {
     super({ id });
     this.path = path;
     this.template = template;
     this.container = container;
+
+    this.elementMap = new Map(); // Track elements by their object ID
   }
 
   async initialize() {
+
     this.templateElement = this.root.el[this.template];
-    this.templateContainer = this.root.el[this.container];
-    this.reactiveList = this.root.tree.read(this.path);
-
-    // when list changes restart
-    this.subscribe("main", this.reactiveList, () => {
+    this.templateContainerElement = this.root.el[this.container];
+    this.reactiveListArr = this.root.tree.read(this.path);
 
 
-      this.schedule(this.restart);
+  }
 
+  start() {
 
+    // Subscribe with DOM patch operations
+    this.subscribe("main", this.reactiveListArr, { diff: 'DOM' }, (value, patch, changes) => {
+        this.applyPatch(patch);
+    }, {});
 
+  }
+
+  applyPatch(patch) {
+    patch.forEach(op => {
+      if (op.op === 'removeChild') {
+        this.removeElement(op.index);
+      } else if (op.op === 'appendChild') {
+        this.appendElement(op.value);
+      } else if (op.op === 'insertBefore') {
+        this.insertElement(op.value, op.index);
+      }
     });
+  }
 
+  removeElement(index) {
+    const element = this.templateContainerElement.children[index];
+    if (element) {
+      const objectId = element.getAttribute('data-identity');
+      // Unsubscribe from all bindings for this element
+      this.unsubscribe(`inner-${objectId}`);
+      // Remove from DOM
+      element.remove();
+      // Remove from tracking map
+      this.elementMap.delete(objectId);
+    }
+  }
+
+  appendElement(obj) {
+    const objectId = obj[Signal.Symbol].id;
+    const element = this.createElement(obj, objectId);
+    this.templateContainerElement.appendChild(element);
+    this.bindElement(element, obj, objectId);
+  }
+
+  insertElement(obj, index) {
+    const objectId = obj[Signal.Symbol].id;
+    const element = this.createElement(obj, objectId);
+    const referenceNode = this.templateContainerElement.children[index];
+    this.templateContainerElement.insertBefore(element, referenceNode);
+    this.bindElement(element, obj, objectId);
+  }
+
+  createElement(obj, objectId) {
+    const cloned = this.templateElement.content.cloneNode(true);
+    const container = document.createElement("div");
+    container.appendChild(cloned);
+    container.setAttribute("data-identity", objectId);
+    this.elementMap.set(objectId, container);
+    return container;
+  }
+
+  bindElement(element, obj, objectId) {
+    const elements = element.querySelectorAll('[data-name]');
+    elements.forEach(el => {
+      const name = el.dataset.name;
+      this.subscribe(
+        `inner-${objectId}`, // Namespaced subscription
+        obj[name],
+        {},
+        (v) => el.textContent = obj[name]
+      );
+    });
   }
 
   restart() {
@@ -399,50 +467,97 @@ export class RepeaterLifecycle extends Lifecycle {
   }
 
   stop() {
+    this.unsubscribe("main");
     this.unsubscribe("inner");
-
-  }
-
-  start() {
-    // Create the combined signal
-    const dependencies = this.reactiveList;
-    const combinedSignal = combineLatest(...dependencies);
-    this.subscribe( "inner", combinedSignal, () => { this.schedule(this.renderList); }, { terminate: true }, );
-  }
-
-  upsert(id, index) {
-    const existing = this.templateContainer.querySelector(`[data-identity="${id}"]`);
-    if (existing) {
-      moveNodeToIndex(existing, index);
-      return existing; // Return the existing element if found
-    } else {
-      const cloned = this.templateElement.content.cloneNode(true);
-      const container = document.createElement("div"); // Always wrap in a div
-      container.appendChild(cloned);
-      container.setAttribute("data-identity", id);
-      this.templateContainer.appendChild(container); // Append the container to the parent
-      return container; // Return the newly created container
-    }
-  }
-
-  renderList() {
-    for (const [index, obj] of this.reactiveList.entries()) {
-      const objectId = obj[Signal.Symbol].id;
-      const element = this.upsert(objectId, index);
-      const elements = element.querySelectorAll('[data-name]');
-      elements.forEach(el => {
-        const name = el.dataset.name;   // reads the value of the data-id attribute
-        this.subscribe( "inner", obj[name], (v) => el.textContent = obj[name] );
-      });
-    }
+    // Also clean up all inner-* subscriptions
+    this.elementMap.forEach((element, objectId) => {
+      this.unsubscribe(`inner-${objectId}`);
+    });
   }
 
   terminate() {
     this.stop();
     this.unsubscribe();
-    this.removeTemplate(this.template, this.templateContainer);
+    this.removeTemplate(this.template, this.templateContainerElement);
+    this.elementMap.clear();
   }
 }
+
+
+
+// export class RepeaterLifecycle1 extends Lifecycle {
+//   constructor({ id, path, template, container }) {
+//     super({ id });
+//     this.path = path;
+//     this.template = template;
+//     this.container = container;
+//   }
+
+//   async initialize() {
+//     this.templateElement = this.root.el[this.template];
+//     this.templateContainer = this.root.el[this.container];
+//     this.reactiveList = this.root.tree.read(this.path);
+
+//     // when list changes restart
+//     this.subscribe("main", this.reactiveList, {}, (value, patch, changes) => {
+
+//       // TODO: reflow from here, see upsert for DOM renderer
+//       this.schedule(this.restart);
+
+//     }, { diff: 'DOM' });
+
+//   }
+
+//   restart() {
+//     this.stop();
+//     this.start();
+//   }
+
+//   stop() {
+//     this.unsubscribe("inner");
+
+//   }
+
+//   start() {
+//     // Create the combined signal
+//     const dependencies = this.reactiveList;
+//     const combinedSignal = combineLatest(...dependencies);
+//     this.subscribe( "inner", combinedSignal, {}, () => { this.schedule(this.renderList); }, { terminate: true }, );
+//   }
+
+//   upsert(id, index) {
+//     const existing = this.templateContainer.querySelector(`[data-identity="${id}"]`);
+//     if (existing) {
+//       moveNodeToIndex(existing, index);
+//       return existing; // Return the existing element if found
+//     } else {
+//       const cloned = this.templateElement.content.cloneNode(true);
+//       const container = document.createElement("div"); // Always wrap in a div
+//       container.appendChild(cloned);
+//       container.setAttribute("data-identity", id);
+//       this.templateContainer.appendChild(container); // Append the container to the parent
+//       return container; // Return the newly created container
+//     }
+//   }
+
+//   renderList() {
+//     for (const [index, obj] of this.reactiveList.entries()) {
+//       const objectId = obj[Signal.Symbol].id;
+//       const element = this.upsert(objectId, index);
+//       const elements = element.querySelectorAll('[data-name]');
+//       elements.forEach(el => {
+//         const name = el.dataset.name;   // reads the value of the data-id attribute
+//         this.subscribe( "inner", obj[name], {}, (v) => el.textContent = obj[name] );
+//       });
+//     }
+//   }
+
+//   terminate() {
+//     this.stop();
+//     this.unsubscribe();
+//     this.removeTemplate(this.template, this.templateContainer);
+//   }
+// }
 
 export class GradientLifecycle extends Lifecycle {
   gradients = [];
@@ -462,7 +577,7 @@ export class GradientLifecycle extends Lifecycle {
 
     const gradientSource = this.root.tree.read("/my-app/user/gradient.arr");
 
-    this.subscribe("main", gradientSource, (gradients) => {
+    this.subscribe("main", gradientSource, {}, (gradients) => {
       this.gradients = gradients;
       this.schedule(this.restart);
     });
@@ -494,7 +609,7 @@ export class GradientLifecycle extends Lifecycle {
     // Create the combined signal
     const combinedSignal = Signal.combineLatest(...colorStopDependencies);
 
-    this.subscribe( "colors", combinedSignal, () => { this.schedule(this.render); }, { terminate: true }, );
+    this.subscribe( "colors", combinedSignal, {}, () => { this.schedule(this.render); }, { terminate: true }, );
   }
 
   render() {
@@ -522,7 +637,7 @@ export class ColorStopControlLifecycle extends Lifecycle {
     // app.registerPartial('gradientStopElement', ()=>document.getElementById('colorStopTemplate').content.cloneNode(true),(rootContainer)=>rootContainer.querySelector(`#gradientDemo`))
     this.gradients = this.root.tree.read("/my-app/user/gradient.arr");
 
-    this.subscribe("main", this.gradients, () => {
+    this.subscribe("main", this.gradients, {}, () => {
       this.schedule(this.restart);
     });
   }
@@ -557,7 +672,7 @@ export class ColorStopControlLifecycle extends Lifecycle {
 
     // Create the combined signal
     const combinedSignal = Signal.combineLatest(...colorStopDependencies);
-    this.subscribe( "colors", combinedSignal, () => { this.schedule(this.render); }, { terminate: true }, );
+    this.subscribe( "colors", combinedSignal, {}, () => { this.schedule(this.render); }, { terminate: true }, );
 
   }
 

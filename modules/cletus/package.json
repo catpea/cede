@@ -1,7 +1,7 @@
 {
   "name": "cletus",
   "description": "Portable test runner for browser and server!",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "main": "cletus.js",
   "scripts": {

@@ -343,6 +343,127 @@ describe('DOM operations', () => {
 });
 ```
 
+## Custom Reporter
+
+### Stylesheet
+
+```css
+
+:root {
+  --test-text-color-primary: DarkOrange;
+  --test-text-color-pass: DarkSlateGray;
+  --test-text-color-fail: OrangeRed;
+  --test-text-color-error: FireBrick;
+}
+
+.test-results {
+
+  h1,h2,h3,h4,h5,h6 {
+    color: var(--test-text-color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .test {
+
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+
+    &.test-pass {
+      color: var(--test-text-color-pass);
+    }
+
+    &.test-fail {
+      color: var(--test-text-color-fail);
+    }
+
+    &.test-error {
+      color: var(--test-text-color-error);
+      padding:1rem;
+
+    }
+
+    &.test-summary {
+      color: var(--test-text-color-pass);
+    }
+
+  }
+
+}
+
+```
+
+### HTML Element
+
+```html
+
+<div id="results" class="test-results"></div>
+
+```
+
+### Custom Reporter
+
+```javascript
+const results = await waitForCompletion();
+const testResultContainer = document.getElementById("results")
+const detailsElement = document.createElement('ol');
+testResultContainer.appendChild(detailsElement);
+
+if(0){
+  const summaryElement = document.createElement('pre');
+  summaryElement.textContent = `Passed: ${results.summary.passed}\n` + `Failed: ${results.summary.failed}\n`;
+  testResultContainer.appendChild(summaryElement);
+}
+
+class Reporter {
+
+  suite(name){
+    const element = document.createElement('h2');
+    element.textContent = name;
+    return element;
+  }
+
+  pass(message){
+    const element = document.createElement('p');
+    element.classList.add('test', 'test-pass');
+    element.textContent = message;
+    return element;
+  }
+
+  fail(message){
+    const element = document.createElement('p');
+    element.classList.add('test', 'test-fail');
+    element.textContent = message;
+    return element;
+  }
+
+  error(message){
+    const element = document.createElement('p');
+    element.classList.add('test', 'test-error');
+    element.textContent = message;
+    return element;
+  }
+
+  summary(message){
+    const element = document.createElement('p');
+    element.classList.add('test', 'test-summary');
+    element.textContent = message;
+    return element;
+  }
+
+  separator(){
+    return document.createElement('hr');
+  }
+}
+
+const reporter = new Reporter();
+
+for( const result of results.output ){
+  const resultElement = reporter[result.type](result.message, result.timestamp) ;
+  detailsElement.appendChild(resultElement);
+}
+
+```
+
 ## Philosophy
 
 Cletus follows these principles:
