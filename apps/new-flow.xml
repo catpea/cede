@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Flow>
+  <MyBlogFeed src="feed.json">
+    <!--  input="output" means my input port is connected to parents output port allows for input="debug" or input="color1"-->
+    <TopicMap input="output" topics="netsec, hiking">
+    <SomeSink input="output" topics="netsec, hiking"/>
+    </TopicMap>
+  </MyBlogFeed>
+</Flow>

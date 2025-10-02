@@ -3,17 +3,7 @@ import { Signal } from "./modules/supernatural/index.js";
 
 import { DisposableBidirectionalBinder } from "./Disposables.js";
 
-  function combineLatest(...parents) {
-    const child = new Signal();
-    const updateCombinedValue = () => {
-      const values = parents.map((signal) => signal);
-      const nullish = values.some((value) => value == null);
-      if (!nullish) child.value = values;
-    };
-    const subscriptions = parents.map((signal) => signal.subscribe(updateCombinedValue));
-    child.addDisposable(subscriptions);
-    return child;
-  }
+
 
 export class ById {
   constructor(elementContext) {
@@ -78,6 +68,18 @@ export function moveNodeToIndex(node, newIndex) {
     // Insert before the element at insertIndex
     parent.insertBefore(node, updatedChildren[insertIndex]);
   }
+}
+
+function combineLatest(...parents) {
+  const child = new Signal();
+  const updateCombinedValue = () => {
+    const values = parents.map((signal) => signal);
+    const nullish = values.some((value) => value == null);
+    if (!nullish) child.value = values;
+  };
+  const subscriptions = parents.map((signal) => signal.subscribe(updateCombinedValue));
+  child.addDisposable(subscriptions);
+  return child;
 }
 
 export class Lifecycle {
@@ -204,6 +206,34 @@ export class Lifecycle {
 
   async initialize() {}
   async terminate() {}
+
+  // Add to your Lifecycle class:
+
+  async startAll() {
+    const children = this.everyChild();
+    for (const child of children) {
+      // Call start() if it exists on the child
+      if (typeof child.start === 'function') {
+        await child.start();
+      }
+    }
+  }
+
+  async stopAll() {
+    const children = this.everyChild(true); // leaf-first for proper teardown
+    for (const child of children) {
+      // Call stop() if it exists on the child
+      if (typeof child.stop === 'function') {
+        await child.stop();
+      }
+    }
+  }
+
+  async restartAll() {
+    await this.stopAll();
+    await this.startAll();
+  }
+
 
   async initializeAll() {
     const children = this.everyChild();
@@ -368,17 +398,16 @@ export class TemplateLifecycle extends Lifecycle {
   }
 }
 
-
-
 export class RepeaterLifecycle extends Lifecycle {
 
   constructor({ id, path, template, container }) {
+
     super({ id });
     this.path = path;
     this.template = template;
     this.container = container;
-
     this.elementMap = new Map(); // Track elements by their object ID
+
   }
 
   async initialize() {
@@ -387,16 +416,12 @@ export class RepeaterLifecycle extends Lifecycle {
     this.templateContainerElement = this.root.el[this.container];
     this.reactiveListArr = this.root.tree.read(this.path);
 
+    this.start();
 
   }
 
   start() {
-
-    // Subscribe with DOM patch operations
-    this.subscribe("main", this.reactiveListArr, { diff: 'DOM' }, (value, patch, changes) => {
-        this.applyPatch(patch);
-    }, {});
-
+    this.subscribe("main", this.reactiveListArr, { diff: 'DOM' }, (value, patch, changes) => this.applyPatch(patch), {}); // Subscribe with DOM patch operations
   }
 
   applyPatch(patch) {
@@ -484,80 +509,6 @@ export class RepeaterLifecycle extends Lifecycle {
 }
 
 
-
-// export class RepeaterLifecycle1 extends Lifecycle {
-//   constructor({ id, path, template, container }) {
-//     super({ id });
-//     this.path = path;
-//     this.template = template;
-//     this.container = container;
-//   }
-
-//   async initialize() {
-//     this.templateElement = this.root.el[this.template];
-//     this.templateContainer = this.root.el[this.container];
-//     this.reactiveList = this.root.tree.read(this.path);
-
-//     // when list changes restart
-//     this.subscribe("main", this.reactiveList, {}, (value, patch, changes) => {
-
-//       // TODO: reflow from here, see upsert for DOM renderer
-//       this.schedule(this.restart);
-
-//     }, { diff: 'DOM' });
-
-//   }
-
-//   restart() {
-//     this.stop();
-//     this.start();
-//   }
-
-//   stop() {
-//     this.unsubscribe("inner");
-
-//   }
-
-//   start() {
-//     // Create the combined signal
-//     const dependencies = this.reactiveList;
-//     const combinedSignal = combineLatest(...dependencies);
-//     this.subscribe( "inner", combinedSignal, {}, () => { this.schedule(this.renderList); }, { terminate: true }, );
-//   }
-
-//   upsert(id, index) {
-//     const existing = this.templateContainer.querySelector(`[data-identity="${id}"]`);
-//     if (existing) {
-//       moveNodeToIndex(existing, index);
-//       return existing; // Return the existing element if found
-//     } else {
-//       const cloned = this.templateElement.content.cloneNode(true);
-//       const container = document.createElement("div"); // Always wrap in a div
-//       container.appendChild(cloned);
-//       container.setAttribute("data-identity", id);
-//       this.templateContainer.appendChild(container); // Append the container to the parent
-//       return container; // Return the newly created container
-//     }
-//   }
-
-//   renderList() {
-//     for (const [index, obj] of this.reactiveList.entries()) {
-//       const objectId = obj[Signal.Symbol].id;
-//       const element = this.upsert(objectId, index);
-//       const elements = element.querySelectorAll('[data-name]');
-//       elements.forEach(el => {
-//         const name = el.dataset.name;   // reads the value of the data-id attribute
-//         this.subscribe( "inner", obj[name], {}, (v) => el.textContent = obj[name] );
-//       });
-//     }
-//   }
-
-//   terminate() {
-//     this.stop();
-//     this.unsubscribe();
-//     this.removeTemplate(this.template, this.templateContainer);
-//   }
-// }
 
 export class GradientLifecycle extends Lifecycle {
   gradients = [];

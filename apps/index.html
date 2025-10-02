@@ -17,15 +17,11 @@
     </script>
   </head>
   <body>
-
-
     <div style="display: flex">
       <div id="directoryListing" style="flex: 50%"></div>
       <div id="loginApp" style="flex: 50%"></div>
     </div>
-
     <div id="results" class="test-results"></div>
-
     <script type="module">
 
       import { ApplicationLifecycle, TemplateLifecycle, RepeaterLifecycle } from "cede";
@@ -42,27 +38,32 @@
       app.tree.write("/index/apps.arr", [ {name: 'Login Box'}, {name: 'Gradient Builder'}, {name: 'Text Printer'}, ]);
 
       const repeater1 = new RepeaterLifecycle({id:"repeater1", path:"/index/apps.arr", template:"repeaterTemplate", container:"directoryListing"});
+
       app.addChild(repeater1);
 
       repeater1.initializeAll();
 
+      setTimeout(()=>{
+        app.tree.write("/index/apps.arr/0", {name: 'Wednesday'});
+        app.tree.dump()
+      }, 1_000);
 
       loginApp.initializeAll();
 
       setTimeout(()=>{
+        app.tree.write("/index/apps.arr/1", {name: 'Tuesday'});
+        app.tree.dump()
+      }, 2_000);
 
-        app.tree.write("/index/apps.arr/1", {name: 'Bork'});
-      app.tree.dump()
-
-
-      }, 3_000)
+      setTimeout(()=>{
+        app.tree.write("/index/apps.arr/2", {name: 'Monday'});
+        app.tree.dump()
+      }, 3_000);
 
     </script>
-
     <template id="repeaterTemplate">
       <h5 data-name="name">dddde</h5>
     </template>
-
     <template id="loginTemplate">
       <style>
         /* lightweight, no external libs */
@@ -134,19 +135,15 @@
       <form id="loginForm" class="login example">
         <label for="usernameInput">username <sup id="usernameRevisions"></sup></label>
         <input type="text" id="usernameInput" autocomplete="username" />
-
         <label for="passwordInput">password <sup id="passwordRevisions"></sup></label>
         <input type="text" id="passwordInput" autocomplete="current-password" />
-        💾
         <div class="horizontal">
           <button id="dumpButton" type="button">💻 (F12)</button>
           <button id="loadButton" type="button">💾 Load</button>
           <button id="loginButton" type="submit">🧹 Log in &raquo;</button>
         </div>
-
         <small>user interface simulation</small>
       </form>
     </template>
-
   </body>
 </html>
