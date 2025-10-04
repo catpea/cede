@@ -132,7 +132,7 @@ export class Arr extends Array {
   subscribe(subscriber, options = {}) {
     // Short circuit - no diffing needed
     if (options.diff === undefined) {
-      return this[Signal.Symbol].subscribe(subscriber);
+      return this[Signal.Symbol].subscribe(subscriber, options.signal);
     }
 
     // Each subscriber gets its own previousState in closure
@@ -141,7 +141,11 @@ export class Arr extends Array {
     // Wrapper that computes changes before calling subscriber
     const changeComputer = (value) => {
 
-      console.log('aaa changeComputer', previousState, value)
+      if(previousState.length == 0 && value.length == 0) return;
+
+      // console.log('changeComputer previousState', previousState );
+      // console.log('changeComputer value', value);
+      // console.log('changeComputer  Object.is', Object.is(previousState, value));
 
       // Compute the changes
       const changes = diff(previousState, value);
@@ -162,7 +166,7 @@ export class Arr extends Array {
     };
 
     // Subscribe to signal with our wrapper
-    const unsubscribe = this[Signal.Symbol].subscribe(changeComputer);
+    const unsubscribe = this[Signal.Symbol].subscribe(changeComputer, options.signal);
     return unsubscribe;
   }
 
