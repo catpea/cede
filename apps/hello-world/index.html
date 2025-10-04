@@ -8,7 +8,7 @@
     <script type="importmap">
       {
         "imports": {
-          "cede": "../index.js"
+          "cede": "../../index.js"
         }
       }
     </script>
@@ -61,7 +61,7 @@
 
       0% {
         opacity: 0;
-        transform: scale3d(0.3, 0.3, 0.3);
+        transform: scale3d(0.7, 0.7, 0.7);
       }
 
       20% {
@@ -102,13 +102,13 @@
     </template>
 
     <template id="repeaterTemplate">
-      <div class="hello-item">
+      <div class="change-notify hello-item">
         <p class="hello-text" data-name="hello">Hello World</p>
       </div>
     </template>
 
     <!-- XML App Declaration -->
-    <xml-app id="helloApp" src="hello-app.xml"></xml-app>
+    <xml-app id="helloApp" src="gui.xml"></xml-app>
 
     <script type="module">
       // Import your lifecycle classes and XmlApp
@@ -156,7 +156,7 @@
         const i = Math.floor(Math.random() * a.length);
         const j = Math.floor(Math.random() * a.length);
         helloAppElement.root.tree.write(`/helloApp/hello.arr/${i}/hello`, greatings[j].hello);
-      }, 1_000);
+      }, 15_000);
 
     </script>
   </body>

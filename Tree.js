@@ -89,7 +89,7 @@ export class Tree {
           basePath.push(current)
           return location[current.name];
         }else{
-          return location; // keep returning the same
+          return location; // keep returning the same, until segments are processed
         }
 
       }, this.#root);
@@ -121,27 +121,6 @@ export class Tree {
 
 
 
-  write2(base, data = null) {
-    const baseObject = Builder.dig(this.#root, base);
-
-    if (data) {
-      const flattened = this.flatten(data);
-      const ensure = (o,p,f)=>o[p]?o[p]:f(o,p);
-
-      for (const [location, value] of flattened) {
-
-
-        const [path, property] = [location.split("/").slice(0, -1).join("/"), location.split("/").pop()];
-        console.log('HHH',  base, path, property, value)
-        const target = path?Builder.dig(baseObject, path):baseObject;
-        const sig = ensure(target, property, (target, property)=>target[property] = new Signal());
-        sig.value = value;
-        console.log('CCC', baseObject)
-      }// for
-
-    } // id data
-
-  } // method
 
 
 

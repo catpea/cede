@@ -483,6 +483,15 @@ export class RepeaterLifecycle extends Lifecycle {
     return container;
   }
 
+  changeNotify(el){
+    const componentNode = el.closest(".change-notify");
+    if(componentNode){
+      componentNode.style.animation = 'none'; // Remove any previous animation so it can restart
+      void componentNode.offsetWidth; // Trigger reflow to reset the animation state
+      componentNode.style.animation = 'changeNotify 0.5s ease-out'; // Apply the animation
+    }
+  }
+
   bindElement(element, obj, objectId) {
 
     if (! element) throw new Error(`element is required.`);
@@ -506,12 +515,7 @@ export class RepeaterLifecycle extends Lifecycle {
         {},
         (v) => {
           el.textContent = v;
-          // Remove any previous animation so it can restart
-           el.parentNode.style.animation = 'none';
-           // Trigger reflow to reset the animation state
-           void el.parentNode.offsetWidth;
-           // Apply the animation
-           el.parentNode.style.animation = 'changeNotify 0.5s ease-out';
+          this.changeNotify(el);
         }
       );
     });
