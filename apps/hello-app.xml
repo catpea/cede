@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Application container="apps">
-  <Template template="helloWorldTemplate" container="helloWorldApp">
-    <Repeater path="/helloApp/hello.arr" template="repeaterTemplate" container="directoryListing"/>
-  </Template>
+
+  <Template template="helloWorldTemplate" container="helloWorldApp"/>
+  <Tree container="directoryListing"/>
+
+  <Repeater path="/helloApp/hello.arr" template="repeaterTemplate" container="directoryListing"/>
+
 </Application>

@@ -40,7 +40,7 @@
       }
     </style>
   </head>
-  <body>
+  <body id="app">
     <style>
 
     ul#testDetail {
@@ -131,7 +131,7 @@
 
       // Start The Lifecycle Tree (The Root)
 
-      const app = new ApplicationLifecycle({id:"app", container:document.body});
+      const app = new ApplicationLifecycle({id:"app", container:"app"});
       /// NOTE: the reactive data tree is located under app.tree, ex: app.tree.dump();
       app.initialize();
 

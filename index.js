@@ -4,6 +4,8 @@ import { Tree } from "./Tree.js";
 
 import { DisposableBidirectionalBinder } from "./Disposables.js";
 
-import { Lifecycle, ApplicationLifecycle, TemplateLifecycle, RepeaterLifecycle } from "./Lifecycles.js";
+import { XmlApp } from "./XmlApp.js";
 
-export { Signal, Tree, DisposableBidirectionalBinder, Lifecycle, ApplicationLifecycle, TemplateLifecycle, RepeaterLifecycle };
+import { Lifecycle, ApplicationLifecycle, TemplateLifecycle, RepeaterLifecycle, TreeLifecycle } from "./Lifecycles.js";
+
+export { XmlApp, Signal, Tree, DisposableBidirectionalBinder, Lifecycle, ApplicationLifecycle, TemplateLifecycle, RepeaterLifecycle, TreeLifecycle };

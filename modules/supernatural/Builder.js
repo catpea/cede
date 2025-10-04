@@ -28,46 +28,47 @@ export class Builder {
 
     const segments = this.parsePath(pathExpression);
 
-    console.log('SEGMENTS:', segments );
+    // console.log('SEGMENTS:', segments );
 
     // Build nested structure
-    const finalTarget = segments.reduce((current, { key, isArray }, index) => {
+    const finalTarget = segments.reduce((device, { key, isArray, inArray, parent }, index) => {
 
-      console.log('CURRENT:', key, current );
+      const property = Array.isArray(device)?parseInt(key):key;
+      const noProperty = !(property in device);
 
-
-      // Skip the last segment as it's the final destination
-      // if (index === segments.length - 1) return current;
-
-      if (!(key in current)) {
-
-        // const nextSegment = segments[index + 1];
-
-        current[key] = isArray ? options.arrayFactory() : options.objectFactory();
-
+      if (noProperty) {
+        device[property] = isArray ? options.arrayFactory() : options.objectFactory();
       }
+      return device[property];
 
-      return current[key];
+    }, workingTarget );
 
-    }, workingTarget);
-
-    console.log({workingTarget, finalTarget})
     return finalTarget;
   }
 
   /**
-   * Parses path string into structured segments
+   * Parses path string (/a/b/c.arr/1/d) into structured segments
+   * this.ARRAY_SUFFIX is always .arr
    * @private
    */
   static parsePath(pathExpression) {
-    return pathExpression
+    const segments = pathExpression
       .split(this.PATH_DELIMITER)
       .filter(segment => segment.length > 0)
       .map(segment => ({
         key: segment.split('.')[0],
         isArray: segment.endsWith(this.ARRAY_SUFFIX),
+        inArray: false, // Default to false
         originalSegment: segment
       }));
+
+    // Update the `inArray` property
+    for (let i = 1; i < segments.length; i++) {
+      segments[i].parent = segments[i - 1];
+      segments[i].inArray = segments[i - 1].isArray;
+    }
+
+    return segments;
   }
 
   /**

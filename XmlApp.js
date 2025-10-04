@@ -1,22 +1,81 @@
 // XmlApp.js - Lifecycle orchestration through XML
 const components = new Map();
 
+class State {
+  #current = null;
+  #resolvers = new Map();
+  #promises = new Map();
+
+  constructor(config = {}) {
+    const states = config.states || [
+      'connected', 'loading', 'interactive', 'complete'
+    ];
+
+    // Create promise and resolver for each state
+    states.forEach(state => {
+      let resolver;
+      const promise = new Promise(resolve => { resolver = resolve; });
+      this.#promises.set(state, promise);
+      this.#resolvers.set(state, resolver);
+
+      // Define state as a property that returns its promise
+      Object.defineProperty(this, state, {
+        get: () => this.#promises.get(state),
+        enumerable: true
+      });
+    });
+
+    // Set initial state if provided
+    if (config.initial) {
+      this.transition(config.initial);
+    }
+  }
+
+  transition(state) {
+    if (!this.#resolvers.has(state)) {
+      throw new Error(`Unknown state: ${state}`);
+    }
+
+    this.#current = state;
+    this.#resolvers.get(state)?.(state);
+
+    return this;
+  }
+
+  get current() {
+    return this.#current;
+  }
+}
+
+
 export class XmlApp extends HTMLElement {
+
   #root;
   #xmlDoc;
+
+  state = new State({
+    states: ['idle', 'connected', 'loading', 'interactive', 'complete'],
+    initial: 'idle'
+  });
 
   static registerLifecycle(componentName, componentClass) {
     components.set(componentName, componentClass);
   }
 
   async connectedCallback() {
+    this.state.transition('connected');
     const src = this.getAttribute('src');
     if (!src) {
       throw new Error('XmlApp requires a "src" attribute');
     }
 
+    this.state.transition('loading');
     await this.loadAndParse(src);
+
+    this.state.transition('interactive');
     await this.orchestrate();
+
+    this.state.transition('complete');
   }
 
   async loadAndParse(src) {

@@ -1,6 +1,7 @@
 import { uuid } from "./utilities.js";
 
 import { State } from "./State.js";
+import { flat } from "./flat.js";
 
 import { Arborist } from "./Arborist.js";
 import { TreeWalker } from "./TreeWalker.js";
@@ -55,25 +56,89 @@ export class Tree {
     [baseObject[a], baseObject[b]] = [baseObject[b], baseObject[a]];
   }
 
-  write(base, data = null) {
+  write(pathStr, data){
+
+    const entryPairs = flat(data, pathStr, '/');
+    for( const [pathStr, value] of entryPairs ){
+      this.writer(pathStr, value)
+    }
+
+  }
+
+  writer(pathStr, value){
+    console.log('pathStr', pathStr);
+
+    const segments = pathStr
+      .split('/')
+      .filter(segment => segment)
+      .reduce((accumulator, fullName, index)=>{
+        const [parentObject=false] = [accumulator[index-1]];
+        const isParentArr = parentObject?.extension=='arr';
+        const [name, extension=false] = fullName.split('.');
+        const isArr = extension=='arr';
+        accumulator.push({ fullName:isParentArr?parseInt(fullName):fullName, name:isParentArr?parseInt(name):name, extension, parentObject, isArr, isParentArr, });
+        return accumulator;
+      },[])
+
+      /* dig - as deep as we can in the existing Obj hieratchy */
+
+      const basePath = [];
+      const targetObj = segments.reduce((location, current)=>{
+
+        if(current.name in location){
+          basePath.push(current)
+          return location[current.name];
+        }else{
+          return location; // keep returning the same
+        }
+
+      }, this.#root);
+
+      const targetLocated = segments.length == basePath.length;
+
+      if(targetLocated){
+        targetObj.value = value;
+        return;
+      }
+
+      // PATH WAS INCOMPLETE, MUST ADD OBJECTS
+
+      /* dug */
+
+      const assignSegment = segments.slice(basePath.length,basePath.length+1).pop();
+      const pathToCreate = segments.slice(basePath.length+1);
+
+      const structuredPayload = pathToCreate.reduceRight((value, current)=>{
+        const dev = current.isArr?new Arr([], {}):new Obj({}, {});
+        dev[current.fullName] = value;
+        return dev;
+      }, new Signal(value));
+
+
+      // ASSIN NEW STRUCTURE TO EXISTING OBJECT IN A SINGLE ASSIGNMENT
+      targetObj[assignSegment.fullName] = structuredPayload;
+  }
+
+
+
+  write2(base, data = null) {
     const baseObject = Builder.dig(this.#root, base);
 
     if (data) {
       const flattened = this.flatten(data);
       const ensure = (o,p,f)=>o[p]?o[p]:f(o,p);
 
-
-
       for (const [location, value] of flattened) {
 
 
         const [path, property] = [location.split("/").slice(0, -1).join("/"), location.split("/").pop()];
-        console.log('GGGG', {path, property})
+        console.log('HHH',  base, path, property, value)
         const target = path?Builder.dig(baseObject, path):baseObject;
         const sig = ensure(target, property, (target, property)=>target[property] = new Signal());
         sig.value = value;
-
+        console.log('CCC', baseObject)
       }// for
+
     } // id data
 
   } // method
@@ -101,6 +166,7 @@ export class Tree {
   ext(path) {
     return path.match(/[.]([\w\d]+)$/)?.[1] || "";
   }
+
 
   get data() {
     return this.#root;
@@ -184,13 +250,10 @@ export class Tree {
   flatten(data) {
     const flattened = [];
     const walker = new TreeWalker();
-
     walker.visitor = (key, node, parent, path, isLeaf, isRoot) => {
       if (isLeaf) flattened.push([path.join("/"), node]);
     };
-
     walker.walk(data);
-
     return flattened;
   }
 

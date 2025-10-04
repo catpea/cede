@@ -94,6 +94,7 @@ export class Lifecycle {
 
   constructor({ id }) {
     this.#id = id;
+    console.warn('TODO: initialize() must not call start() !!!!')
   }
 
   get id() {
@@ -101,6 +102,9 @@ export class Lifecycle {
   }
 
   subscribe(category, subscribable, signalOptions, subscriber, subscribeOptions) {
+
+    if (! subscribable) throw new Error(`Subscribable is required.`);
+
     const unsubscribe = subscribable.subscribe(subscriber, signalOptions);
 
     const terminatable = subscribeOptions?.terminate && subscribable.terminate;
@@ -344,11 +348,17 @@ export class ApplicationLifecycle extends Lifecycle {
   id;
   #treeRoot;
 
-  constructor({ id, container: rootContainer }) {
+  constructor({ id, container }) {
     super({ id });
     this.#treeRoot = new Tree("kernel-test", false);
-    this.rootContainer = rootContainer;
-    this.el = new ById(rootContainer);
+    this.rootContainer = document.getElementById(container);
+
+    if (!this.rootContainer) {
+      throw new Error(`Element with ID '${container}' not found. Please check if the ID is correct and if the element exists in the DOM.`);
+    }
+
+
+    this.el = new ById(this.rootContainer);
   }
 
   get tree() {
@@ -416,15 +426,15 @@ export class RepeaterLifecycle extends Lifecycle {
     this.templateContainerElement = this.root.el[this.container];
     this.reactiveListArr = this.root.tree.read(this.path);
 
-    this.start();
-
   }
 
   start() {
-    this.subscribe("main", this.reactiveListArr, { diff: 'DOM' }, (value, patch, changes) => this.applyPatch(patch), {}); // Subscribe with DOM patch operations
+    this.subscribe("main", this.reactiveListArr, { diff: 'DOM', signal:{} }, (value, patch, changes) => this.applyPatch(patch), {}); // Subscribe with DOM patch operations
   }
 
   applyPatch(patch) {
+    console.log('applyPatch', patch);
+
     patch.forEach(op => {
       if (op.op === 'removeChild') {
         this.removeElement(op.index);
@@ -474,14 +484,35 @@ export class RepeaterLifecycle extends Lifecycle {
   }
 
   bindElement(element, obj, objectId) {
+
+    if (! element) throw new Error(`element is required.`);
+    if (! obj) throw new Error(`obj is required.`);
+    if (! objectId) throw new Error(`objectId is required.`);
+
     const elements = element.querySelectorAll('[data-name]');
+
     elements.forEach(el => {
       const name = el.dataset.name;
+
+      if (!(name in obj)){
+        console.error(`data-name of ${name} does not exist in obj: `, {...obj})
+        return;
+      }
+
+
       this.subscribe(
         `inner-${objectId}`, // Namespaced subscription
         obj[name],
         {},
-        (v) => el.textContent = obj[name]
+        (v) => {
+          el.textContent = v;
+          // Remove any previous animation so it can restart
+           el.parentNode.style.animation = 'none';
+           // Trigger reflow to reset the animation state
+           void el.parentNode.offsetWidth;
+           // Apply the animation
+           el.parentNode.style.animation = 'changeNotify 0.5s ease-out';
+        }
       );
     });
   }
@@ -508,7 +539,110 @@ export class RepeaterLifecycle extends Lifecycle {
   }
 }
 
+export class TreeLifecycle extends Lifecycle {
+  constructor({ id, path, container }) {
+    super({ id });
+    this.path = path;
+    this.container = container;
+  }
 
+  async initialize() {
+    this.componentContainer = this.root.el[this.container];
+
+    // Get the root data - either from path or entire tree
+
+    if (this.path) {
+      this.localRoot = this.root.tree.read(this.path);
+    } else {
+      this.localRoot = this.root.tree.data;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1111));
+
+  }
+
+  restart() {
+    this.stop();
+    this.start();
+  }
+
+  stop() {
+    this.unsubscribe("nodes");
+    // Clear the container
+    this.componentContainer.innerHTML = '';
+  }
+
+  render(obj, parent, key = null) {
+
+    const id = obj[Signal.Symbol].id;
+
+    // Create list item structure
+    const listContainer = document.createElement("ul");
+    const listItem = document.createElement("li");
+    const itemLabel = document.createElement("span");
+
+    const type = Array.isArray(obj) ? 'arr' : 'obj';
+    itemLabel.textContent = `${key}.${type}`;
+
+
+    // Build structure
+    listItem.setAttribute("data-identity", id);
+    listItem.appendChild(itemLabel);
+    parent.appendChild(listItem);
+
+    // Recurse into children
+    const entries = Array.isArray(obj)
+      ? Array.from(obj.entries())
+      : Object.entries(obj);
+
+    if (entries.length > 0) {
+      listItem.appendChild(listContainer);
+
+      for (const [childKey, child] of entries) {
+        // Check if child is a Signal-wrapped object/array
+        if (child && child[Signal.Symbol]) {
+          this.render(child, listContainer, childKey);
+        } else {
+
+          // Render primitive values
+          const primitiveItem = document.createElement("li");
+          const primitiveItemLabel = document.createElement("span");
+          primitiveItemLabel.textContent = `${childKey}.sig`;
+
+          const a = document.createElement("ul");
+          const b = document.createElement("li");
+          const c = document.createElement("span");
+          c.textContent = `value: "${child.value}"`;
+
+          primitiveItem.appendChild(primitiveItemLabel);
+          primitiveItem.appendChild(a);
+          a.appendChild(b);
+          b.appendChild(c);
+
+
+          listContainer.appendChild(primitiveItem);
+
+        }
+      }
+    }
+  }
+
+  start() {
+    // Create root ul element
+    const rootList = document.createElement("ul");
+    rootList.style.fontFamily = 'monospace';
+    rootList.style.lineHeight = '1.6';
+    this.componentContainer.appendChild(rootList);
+
+    // Start rendering from localRoot
+    this.render(this.localRoot, rootList, this.path || 'root');
+  }
+
+  terminate() {
+    this.stop();
+    this.unsubscribe(); // all remaining
+  }
+}
 
 export class GradientLifecycle extends Lifecycle {
   gradients = [];
