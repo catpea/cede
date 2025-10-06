@@ -95,6 +95,7 @@ export class Lifecycle {
   constructor({ id }) {
     this.#id = id;
     console.warn('TODO: initialize() must not call start() !!!!')
+    console.warn('TODO: all .terminate must call stop()!!!')
   }
 
   get id() {

@@ -6,4 +6,6 @@
 
   <Repeater path="/helloApp/hello.arr" template="repeaterTemplate" container="directoryListing"/>
 
+  <GreetingRandomizer interval="2000" path="/helloApp/hello.arr" src="greetings.json"/>
+
 </Application>
